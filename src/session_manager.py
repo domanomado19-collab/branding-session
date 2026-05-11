@@ -14,7 +14,7 @@ _DAY_END_MARKERS = [
 ]
 
 # 1DAYあたりの想定交流回数（これを100%とする）
-_TARGET_EXCHANGES = 3
+_TARGET_EXCHANGES = 5
 
 
 def build_part_system(part_index: int) -> str:
