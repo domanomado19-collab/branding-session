@@ -1,5 +1,6 @@
 """壁打ちAIブランディングセッション — Streamlit メインアプリ。"""
 import os
+import uuid
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -8,6 +9,7 @@ load_dotenv()
 from src.persona import PARTS, TOTAL_PARTS
 from src.session_manager import SessionManager
 from src.summary_generator import generate_branding_sheet
+from src.session_store import save as save_session, load as load_session
 
 st.set_page_config(
     page_title="パーソナルブランディングセッション",
@@ -56,15 +58,49 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── セッション初期化 ──────────────────────────────────────────────────────────
-if "screen" not in st.session_state:
+
+# ── セッションID管理（URL引き継ぎ）────────────────────────────────────────────
+def _init_session():
+    """URLのsパラメータからセッションを復元、なければ新規作成。"""
+    if "session_id" in st.session_state:
+        return  # すでに初期化済み
+
+    sid = st.query_params.get("s", None)
+
+    if sid:
+        saved = load_session(sid)
+        if saved:
+            st.session_state.session_id = sid
+            st.session_state.screen = saved["screen"]
+            st.session_state.messages = saved["messages"]
+            st.session_state.sheet = saved["sheet"]
+            mgr_data = saved.get("manager")
+            st.session_state.manager = SessionManager.from_dict(mgr_data) if mgr_data else None
+            return
+
+    # 新規セッション
+    new_sid = uuid.uuid4().hex[:12]
+    st.session_state.session_id = new_sid
+    st.query_params["s"] = new_sid
     st.session_state.screen = "welcome"
-if "manager" not in st.session_state:
     st.session_state.manager = None
-if "messages" not in st.session_state:
     st.session_state.messages = []
-if "sheet" not in st.session_state:
     st.session_state.sheet = None
+
+
+def _persist():
+    """現在の状態をファイルに保存。"""
+    mgr: SessionManager | None = st.session_state.get("manager")
+    save_session(
+        session_id=st.session_state.session_id,
+        screen=st.session_state.screen,
+        messages=st.session_state.messages,
+        manager_state=mgr.to_dict() if mgr else None,
+        sheet=st.session_state.get("sheet"),
+    )
+
+
+_init_session()
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
@@ -94,6 +130,7 @@ def show_welcome():
         st.session_state.manager = mgr
         st.session_state.messages = [{"role": "assistant", "content": opening}]
         st.session_state.screen = "chat"
+        _persist()
         st.rerun()
 
 
@@ -101,7 +138,7 @@ def show_welcome():
 def show_chat():
     mgr: SessionManager = st.session_state.manager
 
-    # サイドバー：進捗
+    # サイドバー：進捗 + 再開URL
     with st.sidebar:
         st.markdown("#### セッションの進捗")
         for i, part in enumerate(PARTS):
@@ -112,6 +149,8 @@ def show_chat():
             else:
                 st.markdown(f"　　Part {part['id']} {part['name']}", unsafe_allow_html=False)
         st.progress(mgr.part_index / TOTAL_PARTS)
+        st.markdown("---")
+        st.caption("このページをブックマークしておくと、あとで同じ場所から再開できます。")
 
     st.markdown(f"##### Part {mgr.part_number} / {TOTAL_PARTS}　{mgr.current_part['name']}")
     st.markdown("---")
@@ -151,19 +190,19 @@ def show_chat():
                     st.session_state.sheet = generate_branding_sheet(mgr.part_summaries)
                 st.session_state.screen = "summary"
 
+            _persist()
             st.rerun()
     else:
-        # finished フラグが立ったが画面遷移前の保険
         with st.spinner("ブランディングシートを作成しています..."):
             if not st.session_state.sheet:
                 st.session_state.sheet = generate_branding_sheet(mgr.part_summaries)
         st.session_state.screen = "summary"
+        _persist()
         st.rerun()
 
 
 # ── 画面3：サマリー ───────────────────────────────────────────────────────────
 def _sheet_to_text(sheet: dict) -> str:
-    """ブランディングシートをプレーンテキストに変換する。"""
     def section(label, key):
         return [f"【{label}】", sheet.get(key, ""), ""]
 
@@ -236,6 +275,10 @@ def show_summary():
         )
     with col2:
         if st.button("もう一度セッションをやり直す", use_container_width=True):
+            # 新しいセッションIDで再スタート
+            new_sid = uuid.uuid4().hex[:12]
+            st.session_state.session_id = new_sid
+            st.query_params["s"] = new_sid
             st.session_state.screen = "welcome"
             st.session_state.manager = None
             st.session_state.messages = []

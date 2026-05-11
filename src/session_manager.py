@@ -85,6 +85,23 @@ class SessionManager:
         else:
             self.finished = True
 
+    def to_dict(self) -> dict:
+        return {
+            "part_index": self.part_index,
+            "history": self.history,
+            "part_summaries": self.part_summaries,
+            "finished": self.finished,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SessionManager":
+        mgr = cls()
+        mgr.part_index = data["part_index"]
+        mgr.history = data["history"]
+        mgr.part_summaries = data["part_summaries"]
+        mgr.finished = data["finished"]
+        return mgr
+
     def _extract_part_summary(self) -> str:
         """現在のパートの会話から要点テキストを抽出する。"""
         part = self.current_part
