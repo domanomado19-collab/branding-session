@@ -36,11 +36,6 @@ st.markdown("""
         text-align: right;
         line-height: 1.7;
     }
-    .part-badge {
-        font-size: 12px;
-        color: #888;
-        margin-bottom: 4px;
-    }
     .sheet-section {
         background: #fafafa;
         border-left: 4px solid #c9a96e;
@@ -55,18 +50,24 @@ st.markdown("""
         letter-spacing: 0.05em;
         margin-bottom: 4px;
     }
+    .day-complete-box {
+        background: #f0faf0;
+        border: 2px solid #7bc67e;
+        border-radius: 16px;
+        padding: 24px;
+        margin: 16px 0;
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ── セッションID管理（URL引き継ぎ）────────────────────────────────────────────
+# ── セッションID管理 ──────────────────────────────────────────────────────────
 def _init_session():
-    """URLのsパラメータからセッションを復元、なければ新規作成。"""
     if "session_id" in st.session_state:
-        return  # すでに初期化済み
+        return
 
     sid = st.query_params.get("s", None)
-
     if sid:
         saved = load_session(sid)
         if saved:
@@ -78,7 +79,6 @@ def _init_session():
             st.session_state.manager = SessionManager.from_dict(mgr_data) if mgr_data else None
             return
 
-    # 新規セッション
     new_sid = uuid.uuid4().hex[:12]
     st.session_state.session_id = new_sid
     st.query_params["s"] = new_sid
@@ -89,7 +89,6 @@ def _init_session():
 
 
 def _persist():
-    """現在の状態をファイルに保存。"""
     mgr: SessionManager | None = st.session_state.get("manager")
     save_session(
         session_id=st.session_state.session_id,
@@ -103,28 +102,48 @@ def _persist():
 _init_session()
 
 
+# ── サイドバー：進捗表示 ──────────────────────────────────────────────────────
+def _show_sidebar(mgr: SessionManager):
+    with st.sidebar:
+        completed = mgr.completed_days
+        pct = mgr.progress_pct
+        st.markdown("#### 進捗状況")
+        st.progress(completed / TOTAL_PARTS)
+        st.markdown(f"**{pct}% 完了**　DAY {completed} / {TOTAL_PARTS}")
+        st.markdown("---")
+        for i, part in enumerate(PARTS):
+            if i < completed:
+                st.markdown(f"✓ DAY {part['id']}　{part['name']}")
+            elif i == mgr.part_index and not mgr.finished:
+                st.markdown(f"**▶ DAY {part['id']}　{part['name']}**")
+            else:
+                st.markdown(f"　　DAY {part['id']}　{part['name']}")
+        st.markdown("---")
+        st.caption("このページをブックマークしておくと、あとで同じ場所から再開できます。")
+
+
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
 def show_welcome():
     st.markdown("## パーソナルブランディングセッション")
-    st.markdown("#### あなたらしさを言葉にする、60分の壁打ち体験")
+    st.markdown("#### あなたらしさを言葉にする、全6DAYの壁打ち体験")
     st.markdown("---")
     st.markdown("""
 このセッションでは、**吉田たかみ**があなたの壁打ち相手になります。
 
 チャット形式で質問に答えていくだけで、あなた自身のブランディングの軸が整理されます。
 
-**セッションの流れ（全6パート）**
+**セッションの流れ（全6DAY）**
 """)
     for part in PARTS:
-        st.markdown(f"- **Part {part['id']}**　{part['name']}　—　{part['theme']}")
+        st.markdown(f"- **DAY {part['id']}**　{part['name']}　—　{part['theme']}")
 
     st.markdown("""
 ---
-所要時間の目安：**30〜60分**
+1DAYあたりの目安：**約30分**
 
 答えに正解も不正解もありません。思ったことをそのまま話してください。
 """)
-    if st.button("セッションを始める", type="primary", use_container_width=True):
+    if st.button("DAY 1 を始める", type="primary", use_container_width=True):
         mgr = SessionManager()
         opening = mgr.start()
         st.session_state.manager = mgr
@@ -137,25 +156,13 @@ def show_welcome():
 # ── 画面2：チャット ───────────────────────────────────────────────────────────
 def show_chat():
     mgr: SessionManager = st.session_state.manager
+    _show_sidebar(mgr)
 
-    # サイドバー：進捗 + 再開URL
-    with st.sidebar:
-        st.markdown("#### セッションの進捗")
-        for i, part in enumerate(PARTS):
-            if i < mgr.part_index:
-                st.markdown(f"✓ Part {part['id']} {part['name']}")
-            elif i == mgr.part_index:
-                st.markdown(f"**▶ Part {part['id']} {part['name']}**")
-            else:
-                st.markdown(f"　　Part {part['id']} {part['name']}", unsafe_allow_html=False)
-        st.progress(mgr.part_index / TOTAL_PARTS)
-        st.markdown("---")
-        st.caption("このページをブックマークしておくと、あとで同じ場所から再開できます。")
-
-    st.markdown(f"##### Part {mgr.part_number} / {TOTAL_PARTS}　{mgr.current_part['name']}")
+    completed = mgr.completed_days
+    current_day = mgr.part_index + 1
+    st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")
     st.markdown("---")
 
-    # メッセージ表示
     for msg in st.session_state.messages:
         if msg["role"] == "assistant":
             st.markdown(
@@ -168,7 +175,6 @@ def show_chat():
                 unsafe_allow_html=True,
             )
 
-    # 入力フォーム
     if not mgr.finished:
         with st.form("chat_form", clear_on_submit=True):
             user_input = st.text_area(
@@ -182,13 +188,15 @@ def show_chat():
         if submitted and user_input.strip():
             st.session_state.messages.append({"role": "user", "content": user_input.strip()})
             with st.spinner("たかみが考えています..."):
-                reply, part_done = mgr.send(user_input.strip())
+                reply, day_done = mgr.send(user_input.strip())
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
             if mgr.finished:
                 with st.spinner("ブランディングシートを作成しています..."):
                     st.session_state.sheet = generate_branding_sheet(mgr.part_summaries)
                 st.session_state.screen = "summary"
+            elif day_done:
+                st.session_state.screen = "day_complete"
 
             _persist()
             st.rerun()
@@ -201,7 +209,43 @@ def show_chat():
         st.rerun()
 
 
-# ── 画面3：サマリー ───────────────────────────────────────────────────────────
+# ── 画面3：DAY完了 ────────────────────────────────────────────────────────────
+def show_day_complete():
+    mgr: SessionManager = st.session_state.manager
+    _show_sidebar(mgr)
+
+    completed = mgr.completed_days
+    pct = mgr.progress_pct
+    next_day = mgr.part_index + 1
+
+    st.markdown(
+        f'<div class="day-complete-box">'
+        f'<h2>DAY {completed} 完了！</h2>'
+        f'<p>お疲れ様でした！今日はここまでです。</p>'
+        f'<p style="font-size:24px; font-weight:bold; color:#2e7d32;">{pct}% 達成</p>'
+        f'<p>次は <strong>DAY {next_day}：{PARTS[mgr.part_index]["name"]}</strong> です。</p>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+    st.markdown("**このページをブックマークしておけば、次回ここから再開できます。**")
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(f"続けてDAY {next_day} へ進む", type="primary", use_container_width=True):
+            opening = mgr.resume_day()
+            st.session_state.messages = [{"role": "assistant", "content": opening}]
+            st.session_state.screen = "chat"
+            _persist()
+            st.rerun()
+    with col2:
+        if st.button("今日はここで終わる", use_container_width=True):
+            st.info("お疲れ様でした！ブックマークしたURLからいつでも再開できます。")
+
+
+# ── 画面4：サマリー ───────────────────────────────────────────────────────────
 def _sheet_to_text(sheet: dict) -> str:
     def section(label, key):
         return [f"【{label}】", sheet.get(key, ""), ""]
@@ -228,8 +272,16 @@ def _sheet_to_text(sheet: dict) -> str:
 def show_summary():
     sheet = st.session_state.sheet
 
+    st.markdown(
+        '<div class="day-complete-box">'
+        '<h2>全6DAY 完了！</h2>'
+        '<p>素晴らしい！全てのセッションが終わりました。お疲れ様でした！</p>'
+        '<p style="font-size:24px; font-weight:bold; color:#2e7d32;">100% 達成</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
     st.markdown("## あなたのブランディングシート")
-    st.markdown("セッションお疲れさまでした。あなたのブランディングの軸がまとまりました。")
     st.markdown("---")
 
     sections = [
@@ -275,7 +327,6 @@ def show_summary():
         )
     with col2:
         if st.button("もう一度セッションをやり直す", use_container_width=True):
-            # 新しいセッションIDで再スタート
             new_sid = uuid.uuid4().hex[:12]
             st.session_state.session_id = new_sid
             st.query_params["s"] = new_sid
@@ -294,5 +345,7 @@ if screen == "welcome":
     show_welcome()
 elif screen == "chat":
     show_chat()
+elif screen == "day_complete":
+    show_day_complete()
 elif screen == "summary":
     show_summary()
