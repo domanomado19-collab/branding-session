@@ -1,6 +1,8 @@
 """壁打ちAIブランディングセッション — Streamlit メインアプリ。"""
 import os
 import uuid
+import base64
+from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -12,80 +14,125 @@ from src.summary_generator import generate_branding_sheet
 from src.session_store import save as save_session, load as load_session
 
 st.set_page_config(
-    page_title="パーソナルブランディングセッション",
+    page_title="吉田たかみ｜ブランディングセッション",
     page_icon="✦",
     layout="centered",
 )
 
-st.markdown("""
+@st.cache_data
+def _avatar_b64() -> str:
+    img_path = Path(__file__).parent / "assets" / "takami.jpg"
+    with open(img_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+AVATAR = _avatar_b64()
+
+st.markdown(f"""
 <style>
-    .main { max-width: 720px; }
-    .takami-bubble {
-        background: #f5f0eb;
-        border-radius: 16px 16px 16px 4px;
+    /* ── 全体 ── */
+    .stApp {{ background-color: #faf8f4; }}
+    .main {{ max-width: 720px; }}
+    h1, h2, h3, h4, h5 {{ color: #2c2c2c; letter-spacing: 0.02em; }}
+
+    /* ── たかみ吹き出し（アバター付き） ── */
+    .takami-row {{
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin: 4px 0 16px 0;
+    }}
+    .takami-avatar {{
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        object-position: top;
+        flex-shrink: 0;
+        border: 2px solid #c9a96e;
+        margin-top: 2px;
+    }}
+    .takami-bubble {{
+        background: #f5efe3;
+        border-radius: 4px 16px 16px 16px;
         padding: 14px 18px;
-        margin: 4px 0 12px 0;
-        line-height: 1.7;
-    }
-    .user-bubble {
-        background: #e8f0fe;
-        border-radius: 16px 16px 4px 16px;
+        line-height: 1.8;
+        color: #2c2c2c;
+        font-size: 15px;
+        max-width: calc(100% - 56px);
+    }}
+    .takami-name {{
+        font-size: 11px;
+        color: #c9a96e;
+        font-weight: bold;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
+    }}
+
+    /* ── ユーザー吹き出し ── */
+    .user-row {{
+        display: flex;
+        justify-content: flex-end;
+        margin: 4px 0 16px 0;
+    }}
+    .user-bubble {{
+        background: #3d3a8c;
+        color: #fff;
+        border-radius: 16px 4px 16px 16px;
         padding: 14px 18px;
-        margin: 4px 0 12px 0;
-        text-align: right;
-        line-height: 1.7;
-    }
-    .sheet-section {
-        background: #fafafa;
-        border-left: 4px solid #c9a96e;
-        padding: 12px 16px;
-        margin: 12px 0;
-        border-radius: 0 8px 8px 0;
-    }
-    .sheet-label {
-        font-size: 12px;
+        line-height: 1.8;
+        font-size: 15px;
+        max-width: 80%;
+    }}
+
+    /* ── シート・カード ── */
+    .sheet-section {{
+        background: #fff;
+        border-left: 3px solid #c9a96e;
+        padding: 14px 18px;
+        margin: 10px 0;
+        border-radius: 0 10px 10px 0;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }}
+    .sheet-label {{
+        font-size: 11px;
         font-weight: bold;
         color: #c9a96e;
-        letter-spacing: 0.05em;
-        margin-bottom: 4px;
-    }
-    .celebrate-box {
-        background: #f0faf0;
-        border: 2px solid #7bc67e;
-        border-radius: 16px;
-        padding: 24px;
+        letter-spacing: 0.1em;
+        margin-bottom: 6px;
+    }}
+    .celebrate-box {{
+        background: linear-gradient(135deg, #3d3a8c 0%, #5a56b0 100%);
+        border-radius: 20px;
+        padding: 28px;
         margin: 16px 0;
         text-align: center;
-    }
-    .day-card {
-        border: 1px solid #e0e0e0;
+        color: #fff;
+    }}
+    .celebrate-box h2 {{ color: #fff; }}
+    .celebrate-box p {{ color: rgba(255,255,255,0.9); }}
+    .day-card {{
+        border: 1px solid #e8e0d5;
         border-radius: 12px;
         padding: 14px 18px;
         margin: 8px 0;
-    }
-    .day-card-done {
-        background: #f0faf0;
+        background: #fff;
+    }}
+    .day-card-done {{
+        background: #f5fff5;
         border-color: #7bc67e;
-    }
-    .day-card-active {
-        background: #fff8f0;
+    }}
+    .day-card-active {{
+        background: #fdf8f0;
         border-color: #c9a96e;
         border-width: 2px;
-    }
-    .day-card-future {
-        background: #fafafa;
-        color: #999;
-    }
-    .url-box {
-        background: #f5f5f5;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 12px 16px;
-        font-family: monospace;
-        font-size: 13px;
-        word-break: break-all;
-        margin: 8px 0;
-    }
+    }}
+    .day-card-future {{
+        background: #faf8f4;
+        color: #aaa;
+    }}
+
+    /* ── サイドバー ── */
+    [data-testid="stSidebar"] {{ background-color: #f5f0e8; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -144,8 +191,18 @@ _init_session()
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
 def show_welcome():
-    st.markdown("## パーソナルブランディングセッション")
-    st.markdown("#### あなたらしさを言葉にする、全6DAYの壁打ち体験")
+    # ヘッダー：写真＋タイトル
+    col_img, col_txt = st.columns([1, 2])
+    with col_img:
+        st.markdown(
+            f'<img src="data:image/jpeg;base64,{AVATAR}" '
+            f'style="width:120px;height:120px;border-radius:50%;object-fit:cover;'
+            f'object-position:top;border:3px solid #c9a96e;display:block;margin:0 auto;">',
+            unsafe_allow_html=True,
+        )
+    with col_txt:
+        st.markdown("### 吉田たかみの\nブランディングセッション")
+        st.markdown("*あなたらしさを言葉にする、全6DAYの壁打ち体験*")
     st.markdown("---")
     st.markdown("""
 このセッションでは、**吉田たかみ**があなたの壁打ち相手になります。
@@ -179,7 +236,18 @@ def show_home():
     completed = mgr.completed_days
     overall_pct = mgr.overall_progress_pct
 
-    st.markdown("## マイページ")
+    col_img, col_txt = st.columns([1, 3])
+    with col_img:
+        st.markdown(
+            f'<img src="data:image/jpeg;base64,{AVATAR}" '
+            f'style="width:80px;height:80px;border-radius:50%;object-fit:cover;'
+            f'object-position:top;border:2px solid #c9a96e;display:block;margin:0 auto;">',
+            unsafe_allow_html=True,
+        )
+    with col_txt:
+        st.markdown("### マイページ")
+        st.markdown(f"全体進捗：**{overall_pct}%**　（DAY {completed} / {TOTAL_PARTS} 完了）")
+    st.progress(completed / TOTAL_PARTS)
     st.markdown("---")
 
     # 全体進捗
@@ -258,12 +326,16 @@ def show_chat():
     for msg in st.session_state.messages:
         if msg["role"] == "assistant":
             st.markdown(
-                f'<div class="takami-bubble">🪴 たかみ<br>{msg["content"]}</div>',
+                f'<div class="takami-row">'
+                f'<img src="data:image/jpeg;base64,{AVATAR}" class="takami-avatar">'
+                f'<div><div class="takami-name">TAKAMI</div>'
+                f'<div class="takami-bubble">{msg["content"]}</div></div>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
-                f'<div class="user-bubble">{msg["content"]}</div>',
+                f'<div class="user-row"><div class="user-bubble">{msg["content"]}</div></div>',
                 unsafe_allow_html=True,
             )
 
