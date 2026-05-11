@@ -199,7 +199,6 @@ def show_home():
                 unsafe_allow_html=True,
             )
         elif i == mgr.part_index and not mgr.finished:
-            day_pct = mgr.day_progress_pct
             st.markdown(
                 f'<div class="day-card day-card-active">'
                 f'▶ <strong>DAY {part["id"]}　{part["name"]}</strong>　<span style="color:#c9a96e;">進行中</span><br>'
@@ -207,9 +206,6 @@ def show_home():
                 f'</div>',
                 unsafe_allow_html=True,
             )
-            # DAY内進捗バー
-            st.markdown(f"**DAY {part['id']} の進捗：{day_pct}%**")
-            st.progress(day_pct / 100)
         else:
             st.markdown(
                 f'<div class="day-card day-card-future">'
@@ -244,10 +240,9 @@ def show_home():
 # ── 画面3：チャット ───────────────────────────────────────────────────────────
 def show_chat():
     mgr: SessionManager = st.session_state.manager
-    day_pct = mgr.day_progress_pct
     current_day = mgr.part_index + 1
 
-    # サイドバー：DAY内進捗
+    # サイドバー
     with st.sidebar:
         if st.button("マイページへ", use_container_width=True):
             st.session_state.screen = "home"
@@ -255,8 +250,6 @@ def show_chat():
             st.rerun()
         st.markdown("---")
         st.markdown(f"#### DAY {current_day}　{mgr.current_part['name']}")
-        st.markdown(f"**このDAYの進捗：{day_pct}%**")
-        st.progress(day_pct / 100)
         st.caption("約30分が目安です。たかみが終了を告げると次のDAYへ進みます。")
 
     st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")
