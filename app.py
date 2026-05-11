@@ -17,7 +17,6 @@ st.set_page_config(
     layout="centered",
 )
 
-# ── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
     .main { max-width: 720px; }
@@ -50,13 +49,42 @@ st.markdown("""
         letter-spacing: 0.05em;
         margin-bottom: 4px;
     }
-    .day-complete-box {
+    .celebrate-box {
         background: #f0faf0;
         border: 2px solid #7bc67e;
         border-radius: 16px;
         padding: 24px;
         margin: 16px 0;
         text-align: center;
+    }
+    .day-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin: 8px 0;
+    }
+    .day-card-done {
+        background: #f0faf0;
+        border-color: #7bc67e;
+    }
+    .day-card-active {
+        background: #fff8f0;
+        border-color: #c9a96e;
+        border-width: 2px;
+    }
+    .day-card-future {
+        background: #fafafa;
+        color: #999;
+    }
+    .url-box {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-family: monospace;
+        font-size: 13px;
+        word-break: break-all;
+        margin: 8px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -72,11 +100,13 @@ def _init_session():
         saved = load_session(sid)
         if saved:
             st.session_state.session_id = sid
-            st.session_state.screen = saved["screen"]
             st.session_state.messages = saved["messages"]
             st.session_state.sheet = saved["sheet"]
             mgr_data = saved.get("manager")
             st.session_state.manager = SessionManager.from_dict(mgr_data) if mgr_data else None
+            # chatやday_completeから戻ってきた場合はhomeへ
+            saved_screen = saved["screen"]
+            st.session_state.screen = "home" if saved_screen in ("chat", "day_complete") else saved_screen
             return
 
     new_sid = uuid.uuid4().hex[:12]
@@ -99,27 +129,17 @@ def _persist():
     )
 
 
+def _current_url() -> str:
+    sid = st.session_state.get("session_id", "")
+    try:
+        base = st.context.url if hasattr(st, "context") else "https://your-app.streamlit.app"
+    except Exception:
+        base = "https://your-app.streamlit.app"
+    # query_paramsからベースURLを組み立てる
+    return f"{base.split('?')[0]}?s={sid}"
+
+
 _init_session()
-
-
-# ── サイドバー：進捗表示 ──────────────────────────────────────────────────────
-def _show_sidebar(mgr: SessionManager):
-    with st.sidebar:
-        completed = mgr.completed_days
-        pct = mgr.progress_pct
-        st.markdown("#### 進捗状況")
-        st.progress(completed / TOTAL_PARTS)
-        st.markdown(f"**{pct}% 完了**　DAY {completed} / {TOTAL_PARTS}")
-        st.markdown("---")
-        for i, part in enumerate(PARTS):
-            if i < completed:
-                st.markdown(f"✓ DAY {part['id']}　{part['name']}")
-            elif i == mgr.part_index and not mgr.finished:
-                st.markdown(f"**▶ DAY {part['id']}　{part['name']}**")
-            else:
-                st.markdown(f"　　DAY {part['id']}　{part['name']}")
-        st.markdown("---")
-        st.caption("このページをブックマークしておくと、あとで同じ場所から再開できます。")
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
@@ -153,13 +173,92 @@ def show_welcome():
         st.rerun()
 
 
-# ── 画面2：チャット ───────────────────────────────────────────────────────────
+# ── 画面2：マイページ（ホーム）───────────────────────────────────────────────
+def show_home():
+    mgr: SessionManager = st.session_state.manager
+    completed = mgr.completed_days
+    overall_pct = mgr.overall_progress_pct
+
+    st.markdown("## マイページ")
+    st.markdown("---")
+
+    # 全体進捗
+    st.markdown("### 全体の進捗")
+    st.progress(completed / TOTAL_PARTS)
+    st.markdown(f"**{overall_pct}% 完了**　（DAY {completed} / {TOTAL_PARTS} 終了）")
+    st.markdown("")
+
+    # DAYカード一覧
+    for i, part in enumerate(PARTS):
+        if i < completed:
+            st.markdown(
+                f'<div class="day-card day-card-done">'
+                f'✅ <strong>DAY {part["id"]}　{part["name"]}</strong><br>'
+                f'<span style="color:#666;font-size:13px;">{part["theme"]} — 完了</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        elif i == mgr.part_index and not mgr.finished:
+            day_pct = mgr.day_progress_pct
+            st.markdown(
+                f'<div class="day-card day-card-active">'
+                f'▶ <strong>DAY {part["id"]}　{part["name"]}</strong>　<span style="color:#c9a96e;">進行中</span><br>'
+                f'<span style="color:#666;font-size:13px;">{part["theme"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            # DAY内進捗バー
+            st.markdown(f"**DAY {part['id']} の進捗：{day_pct}%**")
+            st.progress(day_pct / 100)
+        else:
+            st.markdown(
+                f'<div class="day-card day-card-future">'
+                f'○ DAY {part["id"]}　{part["name"]}<br>'
+                f'<span style="font-size:13px;">{part["theme"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("---")
+
+    if not mgr.finished:
+        next_day_num = mgr.part_index + 1
+        if st.button(f"DAY {next_day_num} を続ける", type="primary", use_container_width=True):
+            # DAYの途中で中断した場合はそのまま会話を再開
+            if mgr.day_exchange_count > 0:
+                st.session_state.screen = "chat"
+            else:
+                opening = mgr.resume_day()
+                st.session_state.messages = [{"role": "assistant", "content": opening}]
+                st.session_state.screen = "chat"
+            _persist()
+            st.rerun()
+    else:
+        st.success("全DAY完了！ブランディングシートを確認しましょう。")
+        if st.button("ブランディングシートを見る", type="primary", use_container_width=True):
+            st.session_state.screen = "summary"
+            _persist()
+            st.rerun()
+
+
+# ── 画面3：チャット ───────────────────────────────────────────────────────────
 def show_chat():
     mgr: SessionManager = st.session_state.manager
-    _show_sidebar(mgr)
-
-    completed = mgr.completed_days
+    day_pct = mgr.day_progress_pct
     current_day = mgr.part_index + 1
+
+    # サイドバー：DAY内進捗
+    with st.sidebar:
+        if st.button("マイページへ", use_container_width=True):
+            st.session_state.screen = "home"
+            _persist()
+            st.rerun()
+        st.markdown("---")
+        st.markdown(f"#### DAY {current_day}　{mgr.current_part['name']}")
+        st.markdown(f"**このDAYの進捗：{day_pct}%**")
+        st.progress(day_pct / 100)
+        st.caption("約30分が目安です。たかみが終了を告げると次のDAYへ進みます。")
+
     st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")
     st.markdown("---")
 
@@ -209,43 +308,54 @@ def show_chat():
         st.rerun()
 
 
-# ── 画面3：DAY完了 ────────────────────────────────────────────────────────────
+# ── 画面4：DAY完了 ────────────────────────────────────────────────────────────
 def show_day_complete():
     mgr: SessionManager = st.session_state.manager
-    _show_sidebar(mgr)
-
     completed = mgr.completed_days
-    pct = mgr.progress_pct
-    next_day = mgr.part_index + 1
+    overall_pct = mgr.overall_progress_pct
+    next_day_num = mgr.part_index + 1
 
     st.markdown(
-        f'<div class="day-complete-box">'
+        f'<div class="celebrate-box">'
         f'<h2>DAY {completed} 完了！</h2>'
-        f'<p>お疲れ様でした！今日はここまでです。</p>'
-        f'<p style="font-size:24px; font-weight:bold; color:#2e7d32;">{pct}% 達成</p>'
-        f'<p>次は <strong>DAY {next_day}：{PARTS[mgr.part_index]["name"]}</strong> です。</p>'
+        f'<p style="font-size:18px;">お疲れ様でした！今日はここまでです。</p>'
+        f'<p style="font-size:28px; font-weight:bold; color:#2e7d32;">{overall_pct}% 達成</p>'
         f'</div>',
         unsafe_allow_html=True,
     )
 
     st.markdown("---")
-    st.markdown("**このページをブックマークしておけば、次回ここから再開できます。**")
+
+    # 再開方法の案内
+    st.markdown("### 次回の再開方法")
+    st.info(
+        "**このページのURLをブックマーク**しておくと、次回同じ場所から再開できます。\n\n"
+        "📱 スマホの場合：ブラウザの「共有」→「ブックマークに追加」\n\n"
+        "💻 PCの場合：Cmd+D（Mac）/ Ctrl+D（Windows）でブックマーク"
+    )
+    st.markdown(f"次回はこのURLを開くだけで再開できます：")
+    st.code(f"?s={st.session_state.session_id}", language=None)
+    st.caption("※ URLが変わった場合は上のID部分（?s=〜）を保存しておいてください。")
+
     st.markdown("---")
+    st.markdown(f"**次のセッション：DAY {next_day_num}　{PARTS[mgr.part_index]['name']}**")
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button(f"続けてDAY {next_day} へ進む", type="primary", use_container_width=True):
+        if st.button(f"続けてDAY {next_day_num} へ進む", type="primary", use_container_width=True):
             opening = mgr.resume_day()
             st.session_state.messages = [{"role": "assistant", "content": opening}]
             st.session_state.screen = "chat"
             _persist()
             st.rerun()
     with col2:
-        if st.button("今日はここで終わる", use_container_width=True):
-            st.info("お疲れ様でした！ブックマークしたURLからいつでも再開できます。")
+        if st.button("マイページで進捗を確認する", use_container_width=True):
+            st.session_state.screen = "home"
+            _persist()
+            st.rerun()
 
 
-# ── 画面4：サマリー ───────────────────────────────────────────────────────────
+# ── 画面5：サマリー ───────────────────────────────────────────────────────────
 def _sheet_to_text(sheet: dict) -> str:
     def section(label, key):
         return [f"【{label}】", sheet.get(key, ""), ""]
@@ -273,10 +383,10 @@ def show_summary():
     sheet = st.session_state.sheet
 
     st.markdown(
-        '<div class="day-complete-box">'
-        '<h2>全6DAY 完了！</h2>'
-        '<p>素晴らしい！全てのセッションが終わりました。お疲れ様でした！</p>'
-        '<p style="font-size:24px; font-weight:bold; color:#2e7d32;">100% 達成</p>'
+        '<div class="celebrate-box">'
+        '<h2>全6DAY 完了！おめでとうございます！</h2>'
+        '<p style="font-size:18px;">素晴らしい！全てのセッションが終わりました。お疲れ様でした！</p>'
+        '<p style="font-size:28px; font-weight:bold; color:#2e7d32;">100% 達成</p>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -343,6 +453,8 @@ def show_summary():
 screen = st.session_state.screen
 if screen == "welcome":
     show_welcome()
+elif screen == "home":
+    show_home()
 elif screen == "chat":
     show_chat()
 elif screen == "day_complete":

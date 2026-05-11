@@ -3,7 +3,6 @@ import os
 import anthropic
 from .persona import TAKAMI_SYSTEM_PROMPT, PARTS, TOTAL_PARTS
 
-# たかみがDAYを終了するときに使うマーカーフレーズ
 _DAY_END_MARKERS = [
     "今日はここまで",
     "お疲れ様でした",
@@ -13,6 +12,9 @@ _DAY_END_MARKERS = [
     "全6DAY",
     "いよいよ最終DAY",
 ]
+
+# 1DAYあたりの想定交流回数（これを100%とする）
+_TARGET_EXCHANGES = 3
 
 
 def build_part_system(part_index: int) -> str:
@@ -37,7 +39,8 @@ class SessionManager:
         self.history: list[dict] = []
         self.part_summaries: list[str] = []
         self.finished: bool = False
-        self.day_just_completed: bool = False  # DAY完了直後フラグ
+        self.day_just_completed: bool = False
+        self.day_exchange_count: int = 0  # 現在のDAY内での交流回数
 
     @property
     def current_part(self) -> dict:
@@ -49,12 +52,17 @@ class SessionManager:
 
     @property
     def completed_days(self) -> int:
-        """完了済みのDAY数（現在進行中は含まない）。"""
         return len(self.part_summaries)
 
     @property
-    def progress_pct(self) -> int:
+    def overall_progress_pct(self) -> int:
         return int(self.completed_days / TOTAL_PARTS * 100)
+
+    @property
+    def day_progress_pct(self) -> int:
+        """現在のDAY内の進捗（0〜99%。完了時は呼ばれない）。"""
+        pct = int(self.day_exchange_count / _TARGET_EXCHANGES * 100)
+        return min(pct, 99)
 
     def start(self) -> str:
         opening = get_opening_message(0)
@@ -64,14 +72,15 @@ class SessionManager:
     def resume_day(self) -> str:
         """次のDAYを開始して冒頭メッセージを返す。"""
         self.day_just_completed = False
+        self.day_exchange_count = 0
         opening = get_opening_message(self.part_index)
         self.history.append({"role": "assistant", "content": opening})
         return opening
 
     def send(self, user_message: str) -> tuple[str, bool]:
-        """ユーザーメッセージを送り、たかみの返答と「DAY完了したか」を返す。"""
         self.day_just_completed = False
         self.history.append({"role": "user", "content": user_message})
+        self.day_exchange_count += 1
 
         system = build_part_system(self.part_index)
         response = self.client.messages.create(
@@ -96,6 +105,7 @@ class SessionManager:
         summary = self._extract_part_summary()
         self.part_summaries.append(summary)
         self.day_just_completed = True
+        self.day_exchange_count = 0
 
         if self.part_index < TOTAL_PARTS - 1:
             self.part_index += 1
@@ -109,6 +119,7 @@ class SessionManager:
             "part_summaries": self.part_summaries,
             "finished": self.finished,
             "day_just_completed": self.day_just_completed,
+            "day_exchange_count": self.day_exchange_count,
         }
 
     @classmethod
@@ -119,6 +130,7 @@ class SessionManager:
         mgr.part_summaries = data["part_summaries"]
         mgr.finished = data["finished"]
         mgr.day_just_completed = data.get("day_just_completed", False)
+        mgr.day_exchange_count = data.get("day_exchange_count", 0)
         return mgr
 
     def _extract_part_summary(self) -> str:
