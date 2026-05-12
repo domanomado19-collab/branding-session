@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-SESSIONS_DIR = Path("sessions")
+SESSIONS_DIR = Path("/tmp/branding_sessions")
 
 
 def save(session_id: str, screen: str, messages: list, manager_state: dict | None, sheet: dict | None):
