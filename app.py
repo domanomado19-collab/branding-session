@@ -288,8 +288,7 @@ def show_home():
     if not mgr.finished:
         next_day_num = mgr.part_index + 1
         if st.button(f"DAY {next_day_num} を続ける", type="primary", use_container_width=True):
-            # DAYの途中で中断した場合はそのまま会話を再開
-            if mgr.day_exchange_count > 0:
+            if st.session_state.messages:
                 st.session_state.screen = "chat"
             else:
                 opening = mgr.resume_day()
