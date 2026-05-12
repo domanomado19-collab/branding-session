@@ -45,9 +45,6 @@ def generate_branding_sheet(part_summaries: list[str]) -> dict:
 ## ターゲット顧客像
 一番相性のいいクライアントを2〜3文で具体的に描写する。
 
-## 目標設定
-理想の働き方（稼働スタイル）と月商・年商のイメージを2〜3文でまとめる。
-
 ## 30秒自己紹介フレーズ
 交流会やSNSで使える自己紹介を150字以内で作成する。
 「誰のためのデザイナーか」「何が違うか」「何を提供できるか」が伝わる自然な文体にする。
@@ -76,7 +73,7 @@ def _parse_sheet(text: str) -> dict:
         "personal_skills": "",
         "story": "",
         "target_client": "",
-        "goals": "",
+
         "intro_phrase": "",
         "roadmap": "",
         "raw": text,
@@ -89,7 +86,7 @@ def _parse_sheet(text: str) -> dict:
         "パーソナルスキル": "personal_skills",
         "ストーリー": "story",
         "ターゲット顧客像": "target_client",
-        "目標設定": "goals",
+
         "30秒自己紹介フレーズ": "intro_phrase",
         "次のアクション": "roadmap",
     }

@@ -19,7 +19,6 @@ st.set_page_config(
     layout="centered",
 )
 
-@st.cache_data
 def _avatar_b64() -> str:
     img_path = Path(__file__).parent / "assets" / "takami.jpg"
     with open(img_path, "rb") as f:
@@ -202,14 +201,14 @@ def show_welcome():
         )
     with col_txt:
         st.markdown("### 吉田たかみの\nブランディングセッション")
-        st.markdown("*あなたらしさを言葉にする、全6DAYの壁打ち体験*")
+        st.markdown("*あなたらしさを言葉にする、全5DAYの壁打ち体験*")
     st.markdown("---")
     st.markdown("""
 このセッションでは、**吉田たかみ**があなたの壁打ち相手になります。
 
 チャット形式で質問に答えていくだけで、あなた自身のブランディングの軸が整理されます。
 
-**セッションの流れ（全6DAY）**
+**セッションの流れ（全5DAY）**
 """)
     for part in PARTS:
         st.markdown(f"- **DAY {part['id']}**　{part['name']}　—　{part['theme']}")
@@ -435,7 +434,6 @@ def _sheet_to_text(sheet: dict) -> str:
         *section("PERSONAL SKILLS / パーソナルスキル", "personal_skills"),
         *section("STORY / なぜあなたが選ばれるか", "story"),
         *section("TARGET CLIENT / ターゲット顧客像", "target_client"),
-        *section("GOALS / 目標設定", "goals"),
         *section("30秒自己紹介フレーズ", "intro_phrase"),
         *section("NEXT ACTIONS / 次のアクション", "roadmap"),
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
@@ -450,7 +448,7 @@ def show_summary():
         '<div class="celebrate-box">'
         '<h2>全6DAY 完了！おめでとうございます！</h2>'
         '<p style="font-size:18px;">素晴らしい！全てのセッションが終わりました。お疲れ様でした！</p>'
-        '<p style="font-size:28px; font-weight:bold; color:#2e7d32;">100% 達成</p>'
+        '<p style="font-size:28px; font-weight:bold; color:#fff;">100% 達成</p>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -465,7 +463,6 @@ def show_summary():
         ("PERSONAL SKILLS", "パーソナルスキル", sheet.get("personal_skills", "")),
         ("STORY", "なぜあなたが選ばれるか", sheet.get("story", "")),
         ("TARGET CLIENT", "ターゲット顧客像", sheet.get("target_client", "")),
-        ("GOALS", "目標設定", sheet.get("goals", "")),
         ("30秒自己紹介フレーズ", "交流会・SNSで使える自己紹介", sheet.get("intro_phrase", "")),
     ]
 
