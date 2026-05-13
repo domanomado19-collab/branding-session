@@ -4,13 +4,13 @@ import anthropic
 from .persona import TAKAMI_SYSTEM_PROMPT, PARTS, TOTAL_PARTS
 
 _DAY_END_MARKERS = [
-    "今日はここまで",
+    "今日はここまでにしましょう",
     "お疲れ様でした",
-    "次のDAYでは",
-    "次回は",
-    "また次回",
-    "全6DAY",
-    "いよいよ最終DAY",
+    "次のDAYに進みますか",
+    "今日はここで終わりにして",
+    "全5DAY",
+    "全3DAYS",
+    "3DAYSセルフブランディングセッションまとめ",
 ]
 
 

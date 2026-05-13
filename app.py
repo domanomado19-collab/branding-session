@@ -201,14 +201,14 @@ def show_welcome():
         )
     with col_txt:
         st.markdown("### 吉田たかみの\nブランディングセッション")
-        st.markdown("*あなたらしさを言葉にする、全5DAYの壁打ち体験*")
+        st.markdown("*選ばれる肩書きをつくる、3DAYSセルフブランディングノート*")
     st.markdown("---")
     st.markdown("""
 このセッションでは、**吉田たかみ**があなたの壁打ち相手になります。
 
 チャット形式で質問に答えていくだけで、あなた自身のブランディングの軸が整理されます。
 
-**セッションの流れ（全5DAY）**
+**セッションの流れ（全3DAYS）**
 """)
     for part in PARTS:
         st.markdown(f"- **DAY {part['id']}**　{part['name']}　—　{part['theme']}")
@@ -219,7 +219,7 @@ def show_welcome():
 
 答えに正解も不正解もありません。思ったことをそのまま話してください。
 """)
-    if st.button("DAY 1 を始める", type="primary", use_container_width=True):
+    if st.button("DAY 1 をスタートする", type="primary", use_container_width=True):
         mgr = SessionManager()
         opening = mgr.start()
         st.session_state.manager = mgr
@@ -425,18 +425,21 @@ def _sheet_to_text(sheet: dict) -> str:
 
     parts = [
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "　あなたのブランディングシート",
+        "　3DAYSセルフブランディングセッションまとめ",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
-        *section("BRAND CONCEPT / ブランドコンセプト", "brand_concept"),
-        *section("TITLE / 肩書き", "title"),
-        *section("TECHNICAL SKILLS / テクニカルスキル", "technical_skills"),
-        *section("PERSONAL SKILLS / パーソナルスキル", "personal_skills"),
-        *section("STORY / なぜあなたが選ばれるか", "story"),
-        *section("TARGET CLIENT / ターゲット顧客像", "target_client"),
-        *section("30秒自己紹介フレーズ", "intro_phrase"),
-        *section("NEXT ACTIONS / 次のアクション", "roadmap"),
+        *section("現在地と目指す方向", "position"),
+        *section("あなたのルート", "route"),
+        *section("選ばれたい相手", "target"),
+        *section("提供できること", "value"),
+        *section("自分だからこその理由", "reason"),
+        *section("肩書き仮説", "title_hypothesis"),
+        *section("30秒自己紹介", "intro_30sec"),
+        *section("SNSプロフィール文", "sns_profile"),
+        *section("残っている不安", "anxiety"),
+        *section("個別相談で深めるテーマ", "consultation"),
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "この言葉は、あなたの人生から生まれた大切な仮説です。",
     ]
     return "\n".join(parts)
 
@@ -446,7 +449,7 @@ def show_summary():
 
     st.markdown(
         '<div class="celebrate-box">'
-        '<h2>全6DAY 完了！おめでとうございます！</h2>'
+        '<h2>3DAYS 完了！おめでとうございます！</h2>'
         '<p style="font-size:18px;">素晴らしい！全てのセッションが終わりました。お疲れ様でした！</p>'
         '<p style="font-size:28px; font-weight:bold; color:#fff;">100% 達成</p>'
         '</div>',
@@ -457,13 +460,16 @@ def show_summary():
     st.markdown("---")
 
     sections = [
-        ("BRAND CONCEPT", "ブランドコンセプト", sheet.get("brand_concept", "")),
-        ("TITLE", "肩書き", sheet.get("title", "")),
-        ("TECHNICAL SKILLS", "テクニカルスキル", sheet.get("technical_skills", "")),
-        ("PERSONAL SKILLS", "パーソナルスキル", sheet.get("personal_skills", "")),
-        ("STORY", "なぜあなたが選ばれるか", sheet.get("story", "")),
-        ("TARGET CLIENT", "ターゲット顧客像", sheet.get("target_client", "")),
-        ("30秒自己紹介フレーズ", "交流会・SNSで使える自己紹介", sheet.get("intro_phrase", "")),
+        ("POSITION", "現在地と目指す方向", sheet.get("position", "")),
+        ("ROUTE", "あなたのルート", sheet.get("route", "")),
+        ("TARGET", "選ばれたい相手", sheet.get("target", "")),
+        ("VALUE", "提供できること", sheet.get("value", "")),
+        ("REASON", "自分だからこその理由", sheet.get("reason", "")),
+        ("TITLE HYPOTHESIS", "肩書き仮説", sheet.get("title_hypothesis", "")),
+        ("30秒自己紹介", "交流会・SNSで使える自己紹介", sheet.get("intro_30sec", "")),
+        ("SNS PROFILE", "SNSプロフィール文", sheet.get("sns_profile", "")),
+        ("ANXIETY", "残っている不安", sheet.get("anxiety", "")),
+        ("NEXT STEP", "個別相談で深めるテーマ", sheet.get("consultation", "")),
     ]
 
     for label_en, label_ja, content in sections:
@@ -475,16 +481,6 @@ def show_summary():
                 f'</div>',
                 unsafe_allow_html=True,
             )
-
-    if sheet.get("roadmap"):
-        st.markdown("---")
-        st.markdown(
-            f'<div class="sheet-section">'
-            f'<div class="sheet-label">NEXT ACTIONS</div>'
-            f'<strong>次のアクション</strong><br><br>{sheet["roadmap"]}'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
 
     st.markdown("---")
     col1, col2 = st.columns(2)
