@@ -213,12 +213,38 @@ def show_welcome():
     for part in PARTS:
         st.markdown(f"- **DAY {part['id']}**　{part['name']}　—　{part['theme']}")
 
+    st.markdown("---")
+    st.markdown("#### デザイナーの働き方タイプ（DAY1で確認します）")
     st.markdown("""
----
-1DAYあたりの目安：**約30分**
-
-答えに正解も不正解もありません。思ったことをそのまま話してください。
-""")
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0 16px 0;">
+  <div style="background:#f0f0ff; border-radius:12px; padding:14px; border:1px solid #d0cef0;">
+    <div style="font-size:20px;">🏢</div>
+    <div style="font-weight:bold; color:#3d3a8c; font-size:14px;">会社員型</div>
+    <div style="font-size:12px; color:#555; margin-top:4px;">組織でデザインを担当。チームへの貢献が中心。</div>
+  </div>
+  <div style="background:#fff8f0; border-radius:12px; padding:14px; border:1px solid #e8d4b0;">
+    <div style="font-size:20px;">🌙</div>
+    <div style="font-weight:bold; color:#b07030; font-size:14px;">副業スタート型</div>
+    <div style="font-size:12px; color:#555; margin-top:4px;">本業を続けながら小さく案件を受け始める。</div>
+  </div>
+  <div style="background:#f0fff4; border-radius:12px; padding:14px; border:1px solid #b0dfc0;">
+    <div style="font-size:20px;">🤝</div>
+    <div style="font-weight:bold; color:#1a7a40; font-size:14px;">業務委託・インハウス型</div>
+    <div style="font-size:12px; color:#555; margin-top:4px;">企業に入り込み、継続的に任される。</div>
+  </div>
+  <div style="background:#fff0f5; border-radius:12px; padding:14px; border:1px solid #f0b0c8;">
+    <div style="font-size:20px;">⭐</div>
+    <div style="font-weight:bold; color:#a0206a; font-size:14px;">自営業・専門家型</div>
+    <div style="font-size:12px; color:#555; margin-top:4px;">自分の名前・専門性で直接選ばれる。</div>
+  </div>
+  <div style="background:#f5f0ff; border-radius:12px; padding:14px; border:1px solid #c8b0f0; grid-column:1/-1;">
+    <div style="font-size:20px;">👑</div>
+    <div style="font-weight:bold; color:#5a20a0; font-size:14px;">経営者・チーム型</div>
+    <div style="font-size:12px; color:#555; margin-top:4px;">チームや仕組みで価値を届ける。思想・メソッドの言語化が鍵。</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+    st.markdown("1DAYあたりの目安：**約30分**　答えに正解も不正解もありません。")
     if st.button("DAY 1 をスタートする", type="primary", use_container_width=True):
         mgr = SessionManager()
         opening = mgr.start()
@@ -317,6 +343,17 @@ def show_chat():
         st.markdown("---")
         st.markdown(f"#### DAY {current_day}　{mgr.current_part['name']}")
         st.caption("約30分が目安です。たかみが終了を告げると次のDAYへ進みます。")
+        if current_day == 1:
+            st.markdown("---")
+            st.markdown("**働き方タイプ（参考）**")
+            st.markdown("""
+<div style="font-size:12px;">
+🏢 <b>会社員型</b><br>
+🌙 <b>副業スタート型</b><br>
+🤝 <b>業務委託・インハウス型</b><br>
+⭐ <b>自営業・専門家型</b><br>
+👑 <b>経営者・チーム型</b>
+</div>""", unsafe_allow_html=True)
 
     st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")
     st.markdown("---")
