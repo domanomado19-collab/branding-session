@@ -305,6 +305,80 @@ def _day_note_to_text(day: int, route: str, content: list[tuple[str, str]]) -> s
     return "\n".join(lines)
 
 
+# ── ワークシートサムネイルカード ──────────────────────────────────────────────
+def _ws_card(label: str, path: Path, dl_key: str):
+    """サムネイル画像＋ダウンロードボタンを1枚のカードとして表示。"""
+    if not path.exists():
+        return
+    st.markdown(
+        f'<p style="font-size:12px;font-weight:bold;color:#c9a96e;margin:0 0 4px 0;">{label}</p>',
+        unsafe_allow_html=True,
+    )
+    st.image(str(path), use_container_width=True)
+    with open(path, "rb") as f:
+        st.download_button(
+            label="ダウンロード",
+            data=f.read(),
+            file_name=path.name,
+            mime="image/png",
+            use_container_width=True,
+            key=dl_key,
+        )
+
+
+def _note_guide_section(route: str = ""):
+    """ブランディングノート活用案内（ウェルカム・ホーム共通）。"""
+    st.markdown("""
+<div style="background:#fdf8f0;border-left:4px solid #c9a96e;padding:16px 20px;
+border-radius:0 12px 12px 0;margin:8px 0 16px 0;line-height:1.9;">
+<strong>ブランディングノートの使い方</strong><br>
+AIとの壁打ちのあとに、自分の言葉でノートにまとめてみると思考がさらに整理されます。<br>
+各DAYに対応したワークシートを印刷して、<em>手書きで書き込みながらセッションを進める</em>のがおすすめです。
+</div>
+""", unsafe_allow_html=True)
+
+    # DAY1は全員共通
+    day1_path = WORKSHEETS_DIR / "day1.png"
+    col1, col_dummy = st.columns([1, 1])
+    with col1:
+        _ws_card("DAY 1 ワークシート（全ルート共通）", day1_path, "dl_day1_guide")
+
+    # DAY2・DAY3はルートが判明していれば該当シート、未定なら3種並べて表示
+    st.markdown("**DAY 2 ワークシート**（ルートが決まってから使います）")
+    if route in ("side_job", "inhouse", "specialist"):
+        path = WORKSHEETS_DIR / f"day2_{route}.png"
+        col_a, col_b = st.columns([1, 1])
+        with col_a:
+            route_label = {"side_job": "副業スタート型", "inhouse": "業務委託型", "specialist": "起業家型"}.get(route, route)
+            _ws_card(f"DAY 2 — {route_label}", path, f"dl_day2_{route}_guide")
+    else:
+        col_a, col_b, col_c = st.columns(3)
+        for col, r, lbl in zip(
+            [col_a, col_b, col_c],
+            ["side_job", "inhouse", "specialist"],
+            ["副業スタート型", "業務委託型", "起業家型"],
+        ):
+            with col:
+                _ws_card(f"DAY 2 — {lbl}", WORKSHEETS_DIR / f"day2_{r}.png", f"dl_day2_{r}_guide")
+
+    st.markdown("**DAY 3 ワークシート**（DAY2完了後に使います）")
+    if route in ("side_job", "inhouse", "specialist"):
+        path = WORKSHEETS_DIR / f"day3_{route}.png"
+        col_a, col_b = st.columns([1, 1])
+        with col_a:
+            route_label = {"side_job": "副業スタート型", "inhouse": "業務委託型", "specialist": "起業家型"}.get(route, route)
+            _ws_card(f"DAY 3 — {route_label}", path, f"dl_day3_{route}_guide")
+    else:
+        col_a, col_b, col_c = st.columns(3)
+        for col, r, lbl in zip(
+            [col_a, col_b, col_c],
+            ["side_job", "inhouse", "specialist"],
+            ["副業スタート型", "業務委託型", "起業家型"],
+        ):
+            with col:
+                _ws_card(f"DAY 3 — {lbl}", WORKSHEETS_DIR / f"day3_{r}.png", f"dl_day3_{r}_guide")
+
+
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
 def show_welcome():
     # ヘッダー：写真＋タイトル
@@ -330,36 +404,48 @@ def show_welcome():
 </div>
 """, unsafe_allow_html=True)
 
-    st.markdown("**セッションの流れ（全3DAYS）**")
-    for part in PARTS:
-        st.markdown(f"- **DAY {part['id']}**　{part['name']}　—　{part['theme']}")
+    # ── セッションの進め方 ────────────────────────────────────────────
+    st.markdown("### セッションの進め方")
+    steps = [
+        ("DAY 1", "今のステージと目指したい働き方を知る",
+         "現在の働き方・収入・不安を整理し、あなたに合った4つのルートのどれかを一緒に見つけます。"),
+        ("DAY 2", "選ばれる理由を深掘りする",
+         "人生・偏愛・経験から「誰のための何屋か」の仮説を作ります。ルート別に質問が変わります。"),
+        ("DAY 3", "肩書き・自己紹介に整える",
+         "試しに名乗れる肩書きと、交流会やSNSで使える30秒自己紹介・プロフィール文を作ります。"),
+    ]
+    for i, (day, title, desc) in enumerate(steps):
+        arrow = "" if i == len(steps) - 1 else ""
+        st.markdown(
+            f'<div style="display:flex;align-items:flex-start;gap:14px;margin:10px 0;">'
+            f'<div style="background:#1a2d5a;color:#c9a96e;font-weight:bold;font-size:13px;'
+            f'padding:6px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0;">{day}</div>'
+            f'<div><div style="font-weight:bold;color:#2c2c2c;font-size:15px;">{title}</div>'
+            f'<div style="color:#666;font-size:13px;margin-top:3px;">{desc}</div></div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        if arrow:
+            st.markdown('<div style="text-align:center;color:#c9a96e;font-size:18px;margin:-4px 0;">↓</div>',
+                        unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("#### あなたはどのタイプ？（DAY1で一緒に確認します）")
     st.markdown("""
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0 16px 0;">
-  <div style="background:#fff8f0; border-radius:12px; padding:14px; border:1px solid #e8d4b0;">
-    <div style="font-size:20px;">🌙</div>
-    <div style="font-weight:bold; color:#b07030; font-size:14px;">副業スタート型</div>
-    <div style="font-size:12px; color:#555; margin-top:6px;">今は別の仕事をしながら、週末や空き時間に小さくデザインの仕事を始めたい人。いきなり独立じゃなくて、まずは副業から試してみたい。</div>
-  </div>
-  <div style="background:#f0fff4; border-radius:12px; padding:14px; border:1px solid #b0dfc0;">
-    <div style="font-size:20px;">🤝</div>
-    <div style="font-weight:bold; color:#1a7a40; font-size:14px;">業務委託・インハウス型</div>
-    <div style="font-size:12px; color:#555; margin-top:6px;">特定の会社やチームに入り込んで、継続的にデザインを任されたい人。自分の名前で集客するより、信頼関係の中で仕事を続けたい。</div>
-  </div>
-  <div style="background:#fff0f5; border-radius:12px; padding:14px; border:1px solid #f0b0c8;">
-    <div style="font-size:20px;">⭐</div>
-    <div style="font-weight:bold; color:#a0206a; font-size:14px;">起業家型</div>
-    <div style="font-size:12px; color:#555; margin-top:6px;">自分の名前や専門性を前面に出して、直接お客さんから選ばれたい人。「〇〇といえばこの人」という専門家ポジションを作りたい。</div>
-  </div>
-  <div style="background:#f5f0ff; border-radius:12px; padding:14px; border:1px solid #c8b0f0; grid-column:1/-1;">
-    <div style="font-size:20px;">👑</div>
-    <div style="font-weight:bold; color:#5a20a0; font-size:14px;">ディレクター型</div>
-    <div style="font-size:12px; color:#555; margin-top:6px;">自分一人で作業するより、チームを作ったり仕組みを整えたりして、もっと大きく価値を届けたい人。デザイナーから、プロデューサーや事業家へステップアップしたい。</div>
-  </div>
+<div style="background:#f5f0ff;border-radius:12px;padding:12px 16px;margin:12px 0;font-size:13px;color:#5a20a0;line-height:1.8;">
+✍ <strong>AIの壁打ち＋手書きノートの組み合わせがおすすめです。</strong><br>
+AIとの対話のあと、自分の言葉でノートに書き出してみると、思考がさらに整理されます。<br>
+各DAYに対応したワークシートを用意しています。下記からダウンロードして、印刷してご活用ください。
 </div>
 """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── ブランディングノートのダウンロード ───────────────────────────
+    st.markdown("### ブランディングノートをダウンロード")
+    _note_guide_section(route="")
+
+    st.markdown("---")
+
+    # ── スタートボタン＋規約 ──────────────────────────────────────────
     st.markdown("答えに正解も不正解もありません。思ったことをそのまま話してください。")
     st.caption("「DAY 1 をスタートする」を押すことで、利用規約・プライバシーポリシーに同意したものとみなします。")
     col_l1, col_l2, col_l3 = st.columns(3)
@@ -501,6 +587,15 @@ def show_home():
             st.session_state.screen = "summary"
             _persist()
             st.rerun()
+
+    # ── ブランディングノートダウンロード ──────────────────────────────
+    st.markdown("---")
+    with st.expander("ブランディングノートをダウンロードする（手書き記入用）"):
+        st.markdown("""
+AIとの壁打ちのあとに、自分の言葉でノートに書き出してみると思考がさらに整理されます。
+印刷して手書きで記入しながらセッションを進めるのもおすすめです。
+""")
+        _note_guide_section(route=mgr.route)
 
 
 # ── 画面3：チャット ───────────────────────────────────────────────────────────
