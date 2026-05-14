@@ -1,41 +1,37 @@
-"""セッションデータをファイルに保存・復元する。"""
+"""セッションデータをSupabaseに保存・復元する。/tmp はフォールバック用。"""
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
+# ── Supabase クライアント初期化 ───────────────────────────────────────────────
+def _get_supabase():
+    try:
+        import streamlit as st
+        url = st.secrets.get("SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
+        key = st.secrets.get("SUPABASE_KEY", os.environ.get("SUPABASE_KEY", ""))
+    except Exception:
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_KEY", "")
+
+    if url and key:
+        from supabase import create_client
+        return create_client(url, key)
+    return None
+
+
+# ── /tmp フォールバック ───────────────────────────────────────────────────────
 SESSIONS_DIR = Path("/tmp/branding_sessions")
 
 
-def save(session_id: str, screen: str, messages: list, manager_state: dict | None, sheet: dict | None):
+def _save_file(session_id, data):
     SESSIONS_DIR.mkdir(exist_ok=True)
     path = SESSIONS_DIR / f"{session_id}.json"
-
-    # 既存データから created_at を引き継ぐ
-    created_at = datetime.now().isoformat()
-    if path.exists():
-        try:
-            with open(path, encoding="utf-8") as f:
-                existing = json.load(f)
-            created_at = existing.get("created_at", created_at)
-        except Exception:
-            pass
-
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "screen": screen,
-                "messages": messages,
-                "manager": manager_state,
-                "sheet": sheet,
-                "created_at": created_at,
-                "updated_at": datetime.now().isoformat(),
-            },
-            f,
-            ensure_ascii=False,
-        )
+        json.dump(data, f, ensure_ascii=False)
 
 
-def load(session_id: str) -> dict | None:
+def _load_file(session_id) -> dict | None:
     path = SESSIONS_DIR / f"{session_id}.json"
     if path.exists():
         with open(path, encoding="utf-8") as f:
@@ -43,8 +39,7 @@ def load(session_id: str) -> dict | None:
     return None
 
 
-def load_all() -> list[dict]:
-    """全セッションを更新日時の降順で返す（管理画面用）。"""
+def _load_all_file() -> list[dict]:
     if not SESSIONS_DIR.exists():
         return []
     sessions = []
@@ -58,3 +53,62 @@ def load_all() -> list[dict]:
             continue
     sessions.sort(key=lambda s: s.get("updated_at", ""), reverse=True)
     return sessions
+
+
+# ── 公開API ───────────────────────────────────────────────────────────────────
+def save(session_id: str, screen: str, messages: list,
+         manager_state: dict | None, sheet: dict | None):
+    now = datetime.now().isoformat()
+    data = {
+        "session_id": session_id,
+        "screen": screen,
+        "messages": messages,
+        "manager": manager_state,
+        "sheet": sheet,
+        "updated_at": now,
+    }
+
+    sb = _get_supabase()
+    if sb:
+        try:
+            # created_at は INSERT 時のみ設定（upsert で既存行があれば上書きしない）
+            existing = sb.table("sessions").select("created_at").eq("session_id", session_id).execute()
+            if existing.data:
+                data["created_at"] = existing.data[0]["created_at"]
+            else:
+                data["created_at"] = now
+            sb.table("sessions").upsert(data).execute()
+            return
+        except Exception:
+            pass  # フォールバックへ
+
+    # /tmp フォールバック
+    existing = _load_file(session_id)
+    data["created_at"] = existing.get("created_at", now) if existing else now
+    _save_file(session_id, data)
+
+
+def load(session_id: str) -> dict | None:
+    sb = _get_supabase()
+    if sb:
+        try:
+            result = sb.table("sessions").select("*").eq("session_id", session_id).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    return _load_file(session_id)
+
+
+def load_all() -> list[dict]:
+    """全セッションを更新日時の降順で返す（管理画面用）。"""
+    sb = _get_supabase()
+    if sb:
+        try:
+            result = sb.table("sessions").select("*").order("updated_at", desc=True).execute()
+            return result.data or []
+        except Exception:
+            pass
+
+    return _load_all_file()
