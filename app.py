@@ -518,7 +518,7 @@ def show_home():
                 st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
                 rem = mgr.remaining_restarts(i)
                 if rem > 0:
-                    if st.button(f"やり直す\n残{rem}回", key=f"restart_{i}", use_container_width=True):
+                    if st.button(f"やり直す（残{rem}回）", key=f"restart_{i}", use_container_width=True):
                         opening = mgr.restart_day(i)
                         st.session_state.messages = [{"role": "assistant", "content": opening}]
                         st.session_state.screen = "chat"
