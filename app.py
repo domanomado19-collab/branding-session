@@ -11,7 +11,7 @@ load_dotenv()
 from src.persona import PARTS, TOTAL_PARTS
 from src.session_manager import SessionManager
 from src.summary_generator import generate_branding_sheet
-from src.session_store import save as save_session, load as load_session
+from src.session_store import save as save_session, load as load_session, load_all as load_all_sessions
 
 st.set_page_config(
     page_title="吉田たかみ｜ブランディングセッション",
@@ -756,15 +756,169 @@ def show_summary():
     st.caption("ブラウザの印刷メニュー（Cmd+P / Ctrl+P）→「PDFに保存」でPDF化できます。")
 
 
+# ── 画面6：管理ダッシュボード ────────────────────────────────────────────────
+ROUTE_LABEL = {
+    "side_job": "副業スタート型",
+    "inhouse": "業務委託型",
+    "specialist": "起業家型",
+    "business_owner": "ディレクター型",
+}
+
+def _admin_password() -> str:
+    try:
+        return st.secrets["ADMIN_PASSWORD"]
+    except Exception:
+        return os.environ.get("ADMIN_PASSWORD", "takami2024")
+
+
+def show_admin():
+    st.markdown("## 管理ダッシュボード")
+
+    # ── パスワード認証 ────────────────────────────────────────────────
+    if not st.session_state.get("admin_authed"):
+        pw = st.text_input("管理者パスワード", type="password")
+        if st.button("ログイン", type="primary"):
+            if pw == _admin_password():
+                st.session_state.admin_authed = True
+                st.rerun()
+            else:
+                st.error("パスワードが違います")
+        return
+
+    if st.button("ログアウト", use_container_width=False):
+        st.session_state.admin_authed = False
+        st.rerun()
+
+    sessions = load_all_sessions()
+    if not sessions:
+        st.info("セッションデータがまだありません。")
+        return
+
+    # ── 集計 ──────────────────────────────────────────────────────────
+    total = len(sessions)
+    def completed_days(s):
+        return len((s.get("manager") or {}).get("part_summaries") or [])
+
+    cnt = {0: 0, 1: 0, 2: 0, 3: 0}
+    for s in sessions:
+        cnt[min(completed_days(s), 3)] += 1
+
+    route_cnt: dict[str, int] = {}
+    for s in sessions:
+        r = (s.get("manager") or {}).get("route", "")
+        if r:
+            route_cnt[r] = route_cnt.get(r, 0) + 1
+
+    # ── 概要カード ────────────────────────────────────────────────────
+    st.markdown("### 概要")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("総セッション数", total)
+    c2.metric("開始のみ", cnt[0])
+    c3.metric("DAY1完了", cnt[1])
+    c4.metric("DAY2完了", cnt[2])
+    c5.metric("DAY3全完了", cnt[3])
+
+    if total > 0:
+        st.progress(cnt[3] / total, text=f"全完了率 {cnt[3]/total:.0%}")
+
+    # ルート分布
+    if route_cnt:
+        st.markdown("**ルート分布（DAY1完了以上）**")
+        cols = st.columns(len(route_cnt))
+        for col, (route, count) in zip(cols, route_cnt.items()):
+            col.metric(ROUTE_LABEL.get(route, route), count)
+
+    st.markdown("---")
+
+    # ── フィルター ────────────────────────────────────────────────────
+    st.markdown("### ユーザー一覧")
+    filter_opt = st.radio(
+        "表示フィルター",
+        ["全員", "開始のみ", "DAY1完了", "DAY2完了", "DAY3全完了"],
+        horizontal=True,
+    )
+    filter_map = {"全員": None, "開始のみ": 0, "DAY1完了": 1, "DAY2完了": 2, "DAY3全完了": 3}
+    filter_val = filter_map[filter_opt]
+
+    shown = [s for s in sessions if filter_val is None or completed_days(s) == filter_val]
+
+    if not shown:
+        st.info("該当するセッションがありません。")
+        return
+
+    # ── ユーザーカード ─────────────────────────────────────────────────
+    day_names = ["（開始のみ）", "DAY1完了", "DAY2完了", "DAY3全完了"]
+    progress_pct = [0, 33, 66, 100]
+
+    for s in shown:
+        mgr = s.get("manager") or {}
+        sid = s["session_id"]
+        n_done = completed_days(s)
+        route = mgr.get("route", "")
+        finished = mgr.get("finished", False)
+        updated = s.get("updated_at", "")[:16].replace("T", " ")
+        created = s.get("created_at", "")[:16].replace("T", " ")
+        summaries: list[str] = mgr.get("part_summaries") or []
+        sheet: dict = s.get("sheet") or {}
+
+        label = "✅ 全完了" if finished else f"▶ {day_names[n_done]}"
+        route_str = ROUTE_LABEL.get(route, "（未判定）") if route else "（未判定）"
+
+        with st.expander(f"**{sid[:8]}…** — {label}　{route_str}　最終アクセス: {updated}"):
+            col_a, col_b, col_c = st.columns(3)
+            col_a.markdown(f"**進捗** {progress_pct[n_done]}%")
+            col_b.markdown(f"**ルート** {route_str}")
+            col_c.markdown(f"**開始日** {created}")
+            st.progress(progress_pct[n_done] / 100)
+
+            # DAYごとのサマリー
+            for day_i, summary in enumerate(summaries, start=1):
+                st.markdown(f"**DAY{day_i} まとめ**")
+                st.markdown(
+                    f'<div class="sheet-section" style="margin:4px 0;">'
+                    f'<div style="font-size:13px;color:#555;white-space:pre-line;">{summary}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # DAY3完了時はブランディングシートも表示
+            if finished and sheet:
+                st.markdown("**ブランディングシート**")
+                sheet_labels = [
+                    ("現在地と目指す方向", "position"),
+                    ("ロードマップ", "roadmap"),
+                    ("選ばれたい相手", "target"),
+                    ("提供できること", "value"),
+                    ("肩書き仮説", "title_hypothesis"),
+                    ("30秒自己紹介", "intro_30sec"),
+                    ("SNSプロフィール文", "sns_profile"),
+                    ("残っている不安", "anxiety"),
+                ]
+                for label_ja, key in sheet_labels:
+                    val = sheet.get(key, "")
+                    if val:
+                        st.markdown(
+                            f'<div class="sheet-section" style="margin:4px 0;">'
+                            f'<div class="sheet-label">{label_ja}</div>'
+                            f'{val}'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+
 # ── ルーティング ──────────────────────────────────────────────────────────────
-screen = st.session_state.screen
-if screen == "welcome":
-    show_welcome()
-elif screen == "home":
-    show_home()
-elif screen == "chat":
-    show_chat()
-elif screen == "day_complete":
-    show_day_complete()
-elif screen == "summary":
-    show_summary()
+if st.query_params.get("page") == "admin":
+    show_admin()
+else:
+    _init_session()
+    screen = st.session_state.screen
+    if screen == "welcome":
+        show_welcome()
+    elif screen == "home":
+        show_home()
+    elif screen == "chat":
+        show_chat()
+    elif screen == "day_complete":
+        show_day_complete()
+    elif screen == "summary":
+        show_summary()
