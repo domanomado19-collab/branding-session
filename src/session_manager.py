@@ -36,6 +36,7 @@ class SessionManager:
         self.part_summaries: list[str] = []
         self.finished: bool = False
         self.day_just_completed: bool = False
+        self.route: str = ""  # side_job / inhouse / specialist / business_owner
         # 各DAY開始時点のhistoryインデックスを記録（やり直し用）
         self.day_start_indices: list[int] = [0]
 
@@ -116,13 +117,41 @@ class SessionManager:
         self.part_summaries.append(summary)
         self.day_just_completed = True
 
+        # DAY1完了時にルートを検知
+        if self.part_index == 0:
+            self.route = self._detect_route()
+
         if self.part_index < TOTAL_PARTS - 1:
             self.part_index += 1
-            # 次のDAY開始インデックスを記録
             if len(self.day_start_indices) <= self.part_index:
                 self.day_start_indices.append(len(self.history))
         else:
             self.finished = True
+
+    def _detect_route(self) -> str:
+        """DAY1の会話からルートを判定する。"""
+        history_text = "\n".join(
+            f"{'User' if m['role'] == 'user' else 'AI'}: {m['content']}"
+            for m in self.history
+        )
+        prompt = (
+            "以下はDAY1の会話記録です。ユーザーの現在地と目指す方向から、最も適切なルートを1つだけ選んでください。\n"
+            "回答は以下のいずれか1語のみ：side_job / inhouse / specialist / business_owner\n\n"
+            f"【会話記録】\n{history_text}"
+        )
+        try:
+            res = self.client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=20,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = res.content[0].text.strip().lower()
+            for r in ("side_job", "inhouse", "specialist", "business_owner"):
+                if r in raw:
+                    return r
+        except Exception:
+            pass
+        return "specialist"  # デフォルト
 
     def to_dict(self) -> dict:
         return {
@@ -131,6 +160,7 @@ class SessionManager:
             "part_summaries": self.part_summaries,
             "finished": self.finished,
             "day_just_completed": self.day_just_completed,
+            "route": self.route,
             "day_start_indices": self.day_start_indices,
         }
 
@@ -142,6 +172,7 @@ class SessionManager:
         mgr.part_summaries = data["part_summaries"]
         mgr.finished = data["finished"]
         mgr.day_just_completed = data.get("day_just_completed", False)
+        mgr.route = data.get("route", "")
         mgr.day_start_indices = data.get("day_start_indices", [0])
         return mgr
 

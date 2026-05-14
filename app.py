@@ -12,6 +12,7 @@ from src.persona import PARTS, TOTAL_PARTS
 from src.session_manager import SessionManager
 from src.summary_generator import generate_branding_sheet
 from src.session_store import save as save_session, load as load_session
+from src.note_generator import generate_note_image
 
 st.set_page_config(
     page_title="吉田たかみ｜ブランディングセッション",
@@ -186,6 +187,31 @@ def _current_url() -> str:
 
 
 _init_session()
+
+WORKSHEETS_DIR = Path(__file__).parent / "assets" / "worksheets"
+
+def _get_worksheet_path(day: int, route: str) -> Path | None:
+    if day == 1:
+        return WORKSHEETS_DIR / "day1.png"
+    route_key = route if route in ("side_job", "inhouse", "specialist") else "specialist"
+    path = WORKSHEETS_DIR / f"day{day}_{route_key}.png"
+    return path if path.exists() else None
+
+def _show_worksheet(day: int, route: str):
+    path = _get_worksheet_path(day, route)
+    if path and path.exists():
+        st.markdown("---")
+        st.markdown(f"**DAY{day} ブランディングノート（空白）**　手書きで記入しながらセッションを進めることができます。")
+        st.image(str(path), use_container_width=True)
+        with open(path, "rb") as f:
+            st.download_button(
+                label=f"DAY{day} ブランディングノートをダウンロード",
+                data=f.read(),
+                file_name=f"branding_note_day{day}.png",
+                mime="image/png",
+                use_container_width=True,
+            )
+        st.markdown("---")
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
@@ -366,6 +392,11 @@ def show_chat():
 </div>""", unsafe_allow_html=True)
 
     st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")
+
+    # DAY開始時にワークシートを表示（最初のメッセージが1件のみ＝開始直後）
+    if len(st.session_state.messages) == 1:
+        _show_worksheet(current_day, mgr.route)
+
     st.markdown("---")
 
     for msg in st.session_state.messages:
@@ -447,6 +478,21 @@ def show_day_complete():
     st.code(f"?s={st.session_state.session_id}", language=None)
     st.caption("※ URLが変わった場合は上のID部分（?s=〜）を保存しておいてください。")
 
+    # ── ブランディングノート生成・表示 ──────────────────────────────────
+    st.markdown("---")
+    st.markdown("### DAY {} ブランディングノート".format(completed))
+    with st.spinner("ブランディングノートを作成しています..."):
+        summary_text = mgr.part_summaries[-1] if mgr.part_summaries else ""
+        note_img = generate_note_image(completed, mgr.route, summary_text)
+    st.image(note_img, use_container_width=True)
+    st.download_button(
+        label="ブランディングノートをダウンロード（PNG）",
+        data=note_img,
+        file_name=f"branding_note_day{completed}.png",
+        mime="image/png",
+        use_container_width=True,
+    )
+
     st.markdown("---")
     st.markdown(f"**次のセッション：DAY {next_day_num}　{PARTS[mgr.part_index]['name']}**")
     st.markdown("このまま続けますか？それとも今日はここで終わりにしますか？")
@@ -504,7 +550,7 @@ def show_summary():
         unsafe_allow_html=True,
     )
 
-    st.markdown("## あなたのブランディングシート")
+    st.markdown("## あなたのブランディングノート")
     st.markdown("---")
 
     sections = [
