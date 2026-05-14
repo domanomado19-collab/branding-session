@@ -269,7 +269,7 @@ def show_welcome():
   </div>
 </div>
 """, unsafe_allow_html=True)
-    st.markdown("1DAYあたりの目安：**約30分**　答えに正解も不正解もありません。")
+    st.markdown("答えに正解も不正解もありません。思ったことをそのまま話してください。")
     if st.button("DAY 1 をスタートする", type="primary", use_container_width=True):
         mgr = SessionManager()
         opening = mgr.start()
@@ -377,7 +377,7 @@ def show_chat():
             st.rerun()
         st.markdown("---")
         st.markdown(f"#### DAY {current_day}　{mgr.current_part['name']}")
-        st.caption("約30分が目安です。たかみが終了を告げると次のDAYへ進みます。")
+        st.caption("質問への深掘りが終わったら、たかみが今日のまとめをして次のDAYへ進みます。")
         if current_day == 1:
             st.markdown("---")
             st.markdown("**働き方タイプ（参考）**")
