@@ -58,6 +58,7 @@ st.markdown(f"""
         color: #2c2c2c;
         font-size: 15px;
         max-width: calc(100% - 56px);
+        white-space: pre-line;
     }}
     .takami-name {{
         font-size: 11px;
