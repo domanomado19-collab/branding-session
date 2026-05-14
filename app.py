@@ -581,20 +581,12 @@ def show_chat():
             _persist()
             st.rerun()
     elif not mgr.finished:
-        # 通常のチャット入力フォーム
-        with st.form("chat_form", clear_on_submit=True):
-            user_input = st.text_area(
-                "あなたの答え",
-                placeholder="思ったことをそのまま書いてください...",
-                height=100,
-                label_visibility="collapsed",
-            )
-            submitted = st.form_submit_button("送信", use_container_width=True)
-
-        if submitted and user_input.strip():
-            st.session_state.messages.append({"role": "user", "content": user_input.strip()})
+        # 下部固定チャット入力
+        user_input = st.chat_input("思ったことをそのまま書いてください...")
+        if user_input:
+            st.session_state.messages.append({"role": "user", "content": user_input})
             with st.spinner("たかみが考えています..."):
-                reply, day_done = mgr.send(user_input.strip())
+                reply, day_done = mgr.send(user_input)
             st.session_state.messages.append({"role": "assistant", "content": reply})
             _persist()
             st.rerun()
