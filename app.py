@@ -12,7 +12,6 @@ from src.persona import PARTS, TOTAL_PARTS
 from src.session_manager import SessionManager
 from src.summary_generator import generate_branding_sheet
 from src.session_store import save as save_session, load as load_session
-from src.note_generator import generate_note_image
 
 st.set_page_config(
     page_title="吉田たかみ｜ブランディングセッション",
@@ -212,6 +211,71 @@ def _show_worksheet(day: int, route: str):
                 use_container_width=True,
             )
         st.markdown("---")
+
+
+# ── DAYまとめ抽出ヘルパー ─────────────────────────────────────────────────────
+def _find_summary_message(history: list, day: int) -> str:
+    """会話履歴からDAYまとめメッセージを探して返す。"""
+    marker = f"【DAY{day}まとめ】"
+    for msg in reversed(history):
+        if msg["role"] == "assistant" and marker in msg["content"]:
+            return msg["content"]
+    return ""
+
+
+def _parse_labeled_lines(text: str, labels: list[str]) -> list[tuple[str, str]]:
+    """「ラベル：値」形式の行を順番に抽出して (ラベル, 値) リストで返す。"""
+    results = []
+    lines = text.split("\n")
+    for label in labels:
+        for line in lines:
+            if label in line and "：" in line:
+                value = line.split("：", 1)[1].strip()
+                if value:
+                    results.append((label, value))
+                    break
+    return results
+
+
+def _extract_day_content(history: list, day: int, route: str) -> list[tuple[str, str]]:
+    """DAYのまとめから (セクション名, 内容) のリストを返す。"""
+    text = _find_summary_message(history, day)
+    if not text:
+        return []
+
+    if day == 1:
+        labels = ["現在地", "理由", "目指したい方向", "今必要な言語化", "DAY2で深掘りするテーマ"]
+    elif day == 2:
+        route_labels = {
+            "specialist":     ["肩書きの種", "一番捨てきれないテーマ", "誰のための何屋", "仮の立ち位置", "残っている不安"],
+            "side_job":       ["選ばれたい相手", "提供できること", "仮の立ち位置", "残っている不安"],
+            "inhouse":        ["得意な役割", "力を発揮しやすい現場", "仮の立ち位置", "残っている不安"],
+            "business_owner": ["届けたい相手", "作りたい方向性", "仮の立ち位置", "残っている不安"],
+        }
+        labels = route_labels.get(route, ["選ばれたい相手", "提供できること", "仮の立ち位置", "残っている不安"])
+    else:
+        return []
+
+    return _parse_labeled_lines(text, labels)
+
+
+def _day_note_to_text(day: int, route: str, content: list[tuple[str, str]]) -> str:
+    """DAYノートをテキスト形式に変換する。"""
+    route_labels = {
+        "side_job": "副業スタート型", "inhouse": "業務委託型",
+        "specialist": "起業家型", "business_owner": "ディレクター型",
+    }
+    lines = [
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"  DAY{day} ブランディングノート",
+    ]
+    if route and day > 1:
+        lines.append(f"  ルート：{route_labels.get(route, route)}")
+    lines += ["━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", ""]
+    for label, value in content:
+        lines += [f"【{label}】", value, ""]
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    return "\n".join(lines)
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
@@ -486,20 +550,36 @@ def show_day_complete():
     st.code(f"?s={st.session_state.session_id}", language=None)
     st.caption("※ URLが変わった場合は上のID部分（?s=〜）を保存しておいてください。")
 
-    # ── ブランディングノート生成・表示 ──────────────────────────────────
+    # ── DAYブランディングノート（テキスト形式） ────────────────────────
     st.markdown("---")
-    st.markdown("### DAY {} ブランディングノート".format(completed))
-    with st.spinner("ブランディングノートを作成しています..."):
-        summary_text = mgr.part_summaries[-1] if mgr.part_summaries else ""
-        note_img = generate_note_image(completed, mgr.route, summary_text, mgr.history)
-    st.image(note_img, use_container_width=True)
+    st.markdown(f"### DAY {completed} ブランディングノート")
+
+    day_content = _extract_day_content(mgr.history, completed, mgr.route)
+    if day_content:
+        for label, value in day_content:
+            st.markdown(
+                f'<div class="sheet-section">'
+                f'<div class="sheet-label">{label}</div>'
+                f'{value}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    else:
+        # パース失敗時はサマリー全文を表示
+        fallback = mgr.part_summaries[-1] if mgr.part_summaries else ""
+        st.markdown(fallback)
+
+    note_txt = _day_note_to_text(completed, mgr.route, day_content)
     st.download_button(
-        label="ブランディングノートをダウンロード（PNG）",
-        data=note_img,
-        file_name=f"branding_note_day{completed}.png",
-        mime="image/png",
+        label=f"DAY{completed} ブランディングノートをテキストでダウンロード",
+        data=note_txt.encode("utf-8"),
+        file_name=f"branding_note_day{completed}.txt",
+        mime="text/plain",
         use_container_width=True,
     )
+
+    # 空白ワークシート（手書き用）
+    _show_worksheet(completed, mgr.route)
 
     # DAY3完了時はLINEボタンを表示
     if mgr.finished:
