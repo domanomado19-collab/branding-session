@@ -2,8 +2,10 @@
 import os
 import uuid
 import base64
+from datetime import datetime, timedelta
 from pathlib import Path
 import streamlit as st
+import streamlit.components.v1 as _components
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -138,6 +140,8 @@ st.markdown(f"""
 
 
 # ── セッションID管理 ──────────────────────────────────────────────────────────
+USAGE_DAYS = 30  # 利用期限（日数）
+
 def _init_session():
     if "session_id" in st.session_state:
         return
@@ -149,9 +153,9 @@ def _init_session():
             st.session_state.session_id = sid
             st.session_state.messages = saved["messages"]
             st.session_state.sheet = saved["sheet"]
+            st.session_state.created_at = saved.get("created_at", datetime.now().isoformat())
             mgr_data = saved.get("manager")
             st.session_state.manager = SessionManager.from_dict(mgr_data) if mgr_data else None
-            # chatやday_completeから戻ってきた場合はhomeへ
             saved_screen = saved["screen"]
             st.session_state.screen = "home" if saved_screen in ("chat", "day_complete") else saved_screen
             return
@@ -163,6 +167,28 @@ def _init_session():
     st.session_state.manager = None
     st.session_state.messages = []
     st.session_state.sheet = None
+    st.session_state.created_at = datetime.now().isoformat()
+
+
+def _remaining_days() -> int:
+    """初回アクセスから USAGE_DAYS 日後までの残り日数を返す。"""
+    try:
+        created = datetime.fromisoformat(st.session_state.get("created_at", datetime.now().isoformat()))
+        expiry = created + timedelta(days=USAGE_DAYS)
+        return max(0, (expiry - datetime.now()).days)
+    except Exception:
+        return USAGE_DAYS
+
+
+def _is_expired() -> bool:
+    return _remaining_days() == 0
+
+
+def _scroll_top():
+    _components.html(
+        "<script>window.parent.document.querySelector('section.main').scrollTo(0,0);</script>",
+        height=0,
+    )
 
 
 def _persist():
@@ -335,12 +361,31 @@ def show_welcome():
 </div>
 """, unsafe_allow_html=True)
     st.markdown("答えに正解も不正解もありません。思ったことをそのまま話してください。")
+    st.caption("「DAY 1 をスタートする」を押すことで、利用規約・プライバシーポリシーに同意したものとみなします。")
+    col_l1, col_l2, col_l3 = st.columns(3)
+    with col_l1:
+        if st.button("利用規約", use_container_width=True):
+            st.session_state.legal_from = "welcome"
+            st.session_state.screen = "legal"
+            st.rerun()
+    with col_l2:
+        if st.button("プライバシーポリシー", use_container_width=True):
+            st.session_state.legal_from = "welcome"
+            st.session_state.screen = "legal"
+            st.rerun()
+    with col_l3:
+        if st.button("特定商取引法", use_container_width=True):
+            st.session_state.legal_from = "welcome"
+            st.session_state.screen = "legal"
+            st.rerun()
+    st.markdown("---")
     if st.button("DAY 1 をスタートする", type="primary", use_container_width=True):
         mgr = SessionManager()
         opening = mgr.start()
         st.session_state.manager = mgr
         st.session_state.messages = [{"role": "assistant", "content": opening}]
         st.session_state.screen = "chat"
+        st.session_state.scroll_chat_top = True  # 上部から表示
         _persist()
         st.rerun()
 
@@ -385,12 +430,17 @@ def show_home():
                 )
             with col_btn:
                 st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-                if st.button("やり直す", key=f"restart_{i}", use_container_width=True):
-                    opening = mgr.restart_day(i)
-                    st.session_state.messages = [{"role": "assistant", "content": opening}]
-                    st.session_state.screen = "chat"
-                    _persist()
-                    st.rerun()
+                rem = mgr.remaining_restarts(i)
+                if rem > 0:
+                    if st.button(f"やり直す\n残{rem}回", key=f"restart_{i}", use_container_width=True):
+                        opening = mgr.restart_day(i)
+                        st.session_state.messages = [{"role": "assistant", "content": opening}]
+                        st.session_state.screen = "chat"
+                        st.session_state.scroll_chat_top = True
+                        _persist()
+                        st.rerun()
+                else:
+                    st.button("やり直し済", key=f"restart_{i}", use_container_width=True, disabled=True)
 
             # 会話履歴の展開パネル
             day_start = mgr.day_start_indices[i] if i < len(mgr.day_start_indices) else 0
@@ -436,11 +486,13 @@ def show_home():
         next_day_num = mgr.part_index + 1
         if st.button(f"DAY {next_day_num} を続ける", type="primary", use_container_width=True):
             if st.session_state.messages:
+                # 途中から再開→続きから表示（スクロールフラグなし）
                 st.session_state.screen = "chat"
             else:
                 opening = mgr.resume_day()
                 st.session_state.messages = [{"role": "assistant", "content": opening}]
                 st.session_state.screen = "chat"
+                st.session_state.scroll_chat_top = True  # 新DAY開始→上部から
             _persist()
             st.rerun()
     else:
@@ -457,7 +509,12 @@ def show_chat():
     current_day = mgr.part_index + 1
     completed_day = mgr.completed_days  # DAY完了数（完了直後はこちらを表示）
 
+    # ── 新規DAY開始時はページ上部へスクロール ────────────────────────
+    if st.session_state.pop("scroll_chat_top", False):
+        _scroll_top()
+
     # サイドバー
+    remaining = _remaining_days()
     with st.sidebar:
         if st.button("マイページへ", use_container_width=True):
             st.session_state.screen = "home"
@@ -468,18 +525,17 @@ def show_chat():
             st.markdown(f"#### DAY {completed_day} 完了！")
             st.caption("下のボタンからブランディングノートを確認できます。")
         else:
-            st.markdown(f"#### DAY {current_day}　{mgr.current_part['name']}")
-            st.caption("質問への深掘りが終わったら、たかみが今日のまとめをして次のDAYへ進みます。")
-        if current_day == 1 and not mgr.day_just_completed:
-            st.markdown("---")
-            st.markdown("**働き方タイプ（参考）**")
-            st.markdown("""
-<div style="font-size:12px;">
-🌙 <b>副業スタート型</b><br>
-🤝 <b>業務委託型</b><br>
-⭐ <b>起業家型</b><br>
-👑 <b>ディレクター型</b>
-</div>""", unsafe_allow_html=True)
+            st.markdown(f"#### DAY {current_day} / {TOTAL_PARTS}")
+            st.markdown(f"**{mgr.current_part['name']}**")
+        st.markdown("---")
+        st.markdown(f"**進捗** {mgr.overall_progress_pct}%")
+        st.progress(mgr.overall_progress_pct / 100)
+        if remaining > 5:
+            st.caption(f"利用期限まで あと **{remaining}日**")
+        elif remaining > 0:
+            st.warning(f"利用期限まで あと **{remaining}日**")
+        else:
+            st.error("利用期限が終了しています")
 
     if mgr.day_just_completed:
         st.markdown(f"##### DAY {completed_day} 完了！")
@@ -919,13 +975,159 @@ def show_admin():
                         )
 
 
+# ── 利用期限切れ画面 ──────────────────────────────────────────────────────────
+def show_expired():
+    st.markdown(
+        '<div class="celebrate-box" style="background:linear-gradient(135deg,#666,#999);">'
+        '<h2 style="color:#fff;">ご利用期限が終了しました</h2>'
+        '<p style="color:rgba(255,255,255,0.9);">3days MINE BRANDING の利用期限（30日間）が終了しました。</p>'
+        '<p style="color:rgba(255,255,255,0.9);">引き続き個別相談でサポートします。</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div style="text-align:center;margin-top:24px;">'
+        '<a href="https://lin.ee/yZCe0OW" target="_blank" style="'
+        'display:inline-block;background:#06C755;color:#fff;font-weight:bold;'
+        'font-size:18px;padding:14px 40px;border-radius:50px;text-decoration:none;">'
+        'LINEで個別相談に申し込む</a>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ── 法律ページ ─────────────────────────────────────────────────────────────────
+def show_legal():
+    st.markdown("## 各種規約・表記")
+    tab1, tab2, tab3 = st.tabs(["利用規約", "プライバシーポリシー", "特定商取引法に基づく表記"])
+
+    with tab1:
+        st.markdown("""
+### 3days MINE BRANDING 利用規約
+制定日：2026年5月14日
+
+**第1条　適用**
+本規約は、3days MINE BRANDING（以下「本サービス」）の利用条件を定めるものです。本サービスを購入または利用する方（以下「利用者」）は、本規約に同意のうえご利用ください。
+
+**第2条　サービス内容**
+本サービスは、AIとの対話・ブランディングノート・ワークシートを通じて、利用者の働き方・経験・強み・方向性を整理し、肩書き・自己紹介・プロフィール文等の仮説作成を支援するセルフブランディングサービスです。特定の成果を保証するものではありません。
+
+**第3条　成果保証の否認**
+運営者は、売上増加・案件獲得・単価アップ・集客成果・独立副業成功等の特定の成果を保証しません。利用者は本サービスで得られた内容を参考情報として利用し、最終的な判断・行動を自己の責任において行うものとします。
+
+**第4条　AI出力に関する注意**
+AI による回答には不正確・不完全・不適切な内容が含まれる場合があります。運営者はAI出力の正確性・完全性・有用性・適法性・独自性・第三者権利非侵害性を保証しません。
+
+**第5条　入力情報に関する注意**
+以下の情報を入力しないでください：①第三者の個人情報　②クライアント・勤務先等の機密情報　③未公開案件・秘密保持義務のある情報　④他者著作物の無断複製　⑤誹謗中傷・差別・違法行為に関する情報。これらの入力により生じた損害について運営者は責任を負いません。
+
+**第6条　個人情報および入力内容の取り扱い**
+取得した情報はサービス提供・AI回答生成・問い合わせ対応・サービス改善・関連サービス案内・法令対応に利用します。詳細は別途プライバシーポリシーをご確認ください。
+
+**第7条　知的財産権**
+本サービスに含まれる教材・ワークシート・プロンプト・デザイン等の権利は運営者または正当な権利者に帰属します。運営者の許可なく複製・転載・配布・販売・講座化・二次利用することはできません。
+
+**第8条　生成物の利用**
+本サービスで生成された肩書き・自己紹介文・プロフィール文等は自身の活動に利用できます。ただし独自性・商標登録可能性・第三者権利非侵害・法令適合性を保証しません。
+
+**第9条　禁止事項**
+①本サービス内容の無断複製・転載・販売・配布　②類似サービス・講座・教材の無断作成・販売　③他者の権利侵害　④虚偽情報の入力　⑤サービス運営の妨害　⑥法令・公序良俗に反する行為
+
+**第10条　料金・支払い**
+利用者は運営者が定める料金を指定の方法で支払うものとします。
+
+**第11条　キャンセル・返金**
+本サービスはデジタルコンテンツおよびAI壁打ちサービスの性質上、購入後のキャンセル・返金は原則お受けしておりません。ただし運営者の責に帰すべきシステム不具合により利用できない場合は個別に対応します。
+
+**第12条　サービスの変更・停止**
+運営者は必要に応じてサービスの内容・仕様・提供方法を変更・停止・終了することがあります。
+
+**第13条　免責事項**
+運営者は本サービスの利用または利用不能により生じた損害について、故意または重過失がある場合を除き責任を負いません。
+
+**第14条　規約の変更**
+運営者は必要に応じて本規約を変更することがあります。変更後の規約は運営者が指定する方法により周知した時点で効力を生じます。
+
+**第15条　準拠法・管轄**
+本規約は日本法に準拠します。紛争が生じた場合、運営者の所在地を管轄する裁判所を第一審の専属的合意管轄裁判所とします。
+""")
+
+    with tab2:
+        st.markdown("""
+### プライバシーポリシー
+制定日：2026年5月14日
+
+**第1条　基本方針**
+株式会社ドマノマドは、3days MINE BRANDINGの提供にあたり、利用者の個人情報および入力情報を適切に取り扱うため、本プライバシーポリシーを定めます。
+
+**第2条　取得する情報**
+・氏名・メールアドレス等の連絡先情報　・AIセッション・ワークシートに入力された内容　・問い合わせ・個別相談申込みで送信された内容　・Cookie・アクセスログ等の利用状況情報
+
+**第3条　利用目的**
+・本サービスの提供・本人確認・決済・利用案内　・AI回答生成・ワーク結果の作成・セッション履歴確認　・問い合わせ対応・重要なお知らせの送付　・個別相談・関連サービス・キャンペーンの案内　・サービス改善・品質向上・利用状況分析　・不正利用・規約違反等への対応　・法令または行政機関等からの要請への対応
+
+**第4条　AIおよび外部サービスの利用**
+AI回答生成等のため外部サービスを利用する場合があります。サービス提供に必要な範囲で入力内容が外部サービスに送信・処理されることがあります。クライアント名・勤務先の機密情報・第三者の個人情報等は入力しないでください。
+
+**第5条　第三者提供**
+法令に基づく場合・利用者の同意がある場合・業務委託先への必要範囲での提供を除き、個人情報を第三者に提供しません。
+
+**第6条　安全管理**
+情報の漏えい・滅失・毀損・不正アクセス等を防止するため、必要かつ適切な安全管理措置を講じます。
+
+**第7条　Cookie等の利用**
+サイトの利便性向上・利用状況分析等のためCookie等を使用する場合があります。
+
+**第8条　開示・訂正・削除等の請求**
+利用者は保有する自己の個人情報について開示・訂正・削除・利用停止等を求めることができます。
+
+**第9条　プライバシーポリシーの変更**
+必要に応じて本ポリシーを変更することがあります。
+
+**第10条　お問い合わせ窓口**
+事業者名：株式会社ドマノマド　運営責任者：吉田たかみ
+""")
+
+    with tab3:
+        st.markdown("""
+### 特定商取引法に基づく表記
+
+| 項目 | 内容 |
+|---|---|
+| 販売事業者 | 株式会社ドマノマド |
+| 運営責任者 | 吉田たかみ |
+| 所在地 | 公開前に正式な所在地を記載 |
+| 電話番号 | 公開前に記載 |
+| メールアドレス | 公開前に問い合わせ先を記載 |
+| 販売価格 | 3days MINE BRANDING：9,800円（税込） |
+| 商品代金以外の費用 | インターネット接続料金・通信料等は利用者負担 |
+| 支払方法 | クレジットカード決済・銀行振込・その他指定の方法 |
+| サービス提供時期 | 決済完了後、利用案内を送付し提供開始 |
+| キャンセル・返金 | デジタルコンテンツの性質上、購入後のキャンセル・返金は原則不可。システム不具合の場合は個別対応 |
+| 動作環境 | インターネット接続可能なスマートフォン・タブレット・PC＋Webブラウザ |
+
+**成果に関する注意**：本サービスは自己理解・方向性整理・肩書き仮説の作成を支援するものです。売上増加・案件獲得・集客成果等を保証するものではありません。
+""")
+
+    st.markdown("---")
+    if st.button("← 戻る", use_container_width=False):
+        st.session_state.screen = st.session_state.get("legal_from", "welcome")
+        st.rerun()
+
+
 # ── ルーティング ──────────────────────────────────────────────────────────────
 if st.query_params.get("page") == "admin":
     show_admin()
 else:
     _init_session()
+
+    # 利用期限チェック（welcomeと法律ページは除く）
     screen = st.session_state.screen
-    if screen == "welcome":
+    if screen not in ("welcome", "legal") and _is_expired():
+        show_expired()
+    elif st.query_params.get("page") == "legal":
+        show_legal()
+    elif screen == "welcome":
         show_welcome()
     elif screen == "home":
         show_home()
@@ -935,3 +1137,5 @@ else:
         show_day_complete()
     elif screen == "summary":
         show_summary()
+    elif screen == "legal":
+        show_legal()

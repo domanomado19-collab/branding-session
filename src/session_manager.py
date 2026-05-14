@@ -45,6 +45,7 @@ class SessionManager:
         self.route: str = ""  # side_job / inhouse / specialist / business_owner
         # 各DAY開始時点のhistoryインデックスを記録（やり直し用）
         self.day_start_indices: list[int] = [0]
+        self.restart_counts: dict[int, int] = {}  # {day_index: 使用済み回数}
 
     @property
     def current_part(self) -> dict:
@@ -77,8 +78,21 @@ class SessionManager:
         self.history.append({"role": "assistant", "content": opening})
         return opening
 
+    MAX_RESTARTS = 1  # 各DAYのやり直し上限
+
+    def can_restart(self, day_index: int) -> bool:
+        return self.restart_counts.get(day_index, 0) < self.MAX_RESTARTS
+
+    def remaining_restarts(self, day_index: int) -> int:
+        return max(0, self.MAX_RESTARTS - self.restart_counts.get(day_index, 0))
+
     def restart_day(self, day_index: int) -> str:
-        """指定したDAY（0-indexed）をやり直す。それ以降の履歴と要約をリセット。"""
+        """指定したDAY（0-indexed）をやり直す。各DAYにつき1回まで。"""
+        if not self.can_restart(day_index):
+            raise ValueError(f"DAY{day_index + 1} のやり直しは上限に達しています")
+
+        self.restart_counts[day_index] = self.restart_counts.get(day_index, 0) + 1
+
         # historyをそのDAYの開始時点まで巻き戻す
         if day_index < len(self.day_start_indices):
             self.history = self.history[:self.day_start_indices[day_index]]
@@ -173,6 +187,7 @@ class SessionManager:
             "day_just_completed": self.day_just_completed,
             "route": self.route,
             "day_start_indices": self.day_start_indices,
+            "restart_counts": self.restart_counts,
         }
 
     @classmethod
@@ -185,6 +200,9 @@ class SessionManager:
         mgr.day_just_completed = data.get("day_just_completed", False)
         mgr.route = data.get("route", "")
         mgr.day_start_indices = data.get("day_start_indices", [0])
+        # JSONはdictキーを文字列に変換するためintに戻す
+        raw = data.get("restart_counts", {})
+        mgr.restart_counts = {int(k): v for k, v in raw.items()}
         return mgr
 
     def _extract_part_summary(self) -> str:
