@@ -625,6 +625,18 @@ def show_chat():
         st.markdown("---")
         st.markdown(f"**進捗** {mgr.overall_progress_pct}%")
         st.progress(mgr.overall_progress_pct / 100)
+        if mgr.route:
+            _route_emoji = {"side_job": "🌙", "inhouse": "🤝", "specialist": "⭐", "business_owner": "👑"}
+            _route_name  = {"side_job": "副業スタート型", "inhouse": "業務委託型",
+                            "specialist": "起業家型", "business_owner": "ディレクター型"}
+            st.markdown(
+                f'<div style="background:#fdf8f0;border-radius:8px;padding:8px 12px;'
+                f'margin:8px 0;font-size:13px;">'
+                f'<span style="color:#c9a96e;font-size:10px;font-weight:bold;letter-spacing:.08em;">YOUR TYPE</span><br>'
+                f'{_route_emoji.get(mgr.route,"")}&nbsp;<strong>{_route_name.get(mgr.route, mgr.route)}</strong>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
         if remaining > 5:
             st.caption(f"利用期限まで あと **{remaining}日**")
         elif remaining > 0:
