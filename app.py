@@ -789,6 +789,19 @@ def show_admin():
         st.session_state.admin_authed = False
         st.rerun()
 
+    # ── Supabase 接続確認 ─────────────────────────────────────────────
+    from src.session_store import _get_supabase
+    sb = _get_supabase()
+    if sb:
+        try:
+            result = sb.table("sessions").select("session_id", count="exact").execute()
+            st.success(f"Supabase 接続OK　{result.count or 0} 件のセッション")
+        except Exception as e:
+            st.error(f"Supabase エラー: {e}")
+            sb = None
+    else:
+        st.warning("Supabase 未接続（/tmp を使用中）　— Secrets を確認してください")
+
     sessions = load_all_sessions()
     if not sessions:
         st.info("セッションデータがまだありません。")
