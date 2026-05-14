@@ -391,6 +391,28 @@ def show_home():
                     st.session_state.screen = "chat"
                     _persist()
                     st.rerun()
+
+            # 会話履歴の展開パネル
+            day_start = mgr.day_start_indices[i] if i < len(mgr.day_start_indices) else 0
+            day_end = mgr.day_start_indices[i + 1] if i + 1 < len(mgr.day_start_indices) else len(mgr.history)
+            day_msgs = mgr.history[day_start:day_end]
+            if day_msgs:
+                with st.expander(f"DAY{i + 1} の会話履歴を見る"):
+                    for msg in day_msgs:
+                        if msg["role"] == "assistant":
+                            st.markdown(
+                                f'<div class="takami-row">'
+                                f'<img src="data:image/jpeg;base64,{AVATAR}" class="takami-avatar">'
+                                f'<div><div class="takami-name">TAKAMI</div>'
+                                f'<div class="takami-bubble">{msg["content"]}</div></div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.markdown(
+                                f'<div class="user-row"><div class="user-bubble">{msg["content"]}</div></div>',
+                                unsafe_allow_html=True,
+                            )
         elif i == mgr.part_index and not mgr.finished:
             st.markdown(
                 f'<div class="day-card day-card-active">'
@@ -706,6 +728,11 @@ def show_summary():
     )
 
     st.markdown("---")
+    if st.button("マイページに戻る（振り返り・会話履歴）", use_container_width=True):
+        st.session_state.screen = "home"
+        _persist()
+        st.rerun()
+
     col1, col2 = st.columns(2)
     with col1:
         st.download_button(
