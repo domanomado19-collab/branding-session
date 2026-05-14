@@ -465,15 +465,23 @@ AIとの対話のあと、自分の言葉でノートに書き出してみると
             st.session_state.screen = "legal"
             st.rerun()
     st.markdown("---")
+    user_name = st.text_input(
+        "まず、お名前（呼び名）を教えてください",
+        placeholder="例：たかみ、山田さん など",
+        max_chars=20,
+    )
     if st.button("DAY 1 をスタートする", type="primary", use_container_width=True):
-        mgr = SessionManager()
-        opening = mgr.start()
-        st.session_state.manager = mgr
-        st.session_state.messages = [{"role": "assistant", "content": opening}]
-        st.session_state.screen = "chat"
-        st.session_state.scroll_chat_top = True  # 上部から表示
-        _persist()
-        st.rerun()
+        if not user_name.strip():
+            st.warning("お名前を入力してからスタートしてください。")
+        else:
+            mgr = SessionManager()
+            opening = mgr.start(user_name.strip())
+            st.session_state.manager = mgr
+            st.session_state.messages = [{"role": "assistant", "content": opening}]
+            st.session_state.screen = "chat"
+            st.session_state.scroll_chat_top = True
+            _persist()
+            st.rerun()
 
 
 # ── 画面2：マイページ（ホーム）───────────────────────────────────────────────

@@ -19,10 +19,16 @@ _DAY_END_SOFT = [
 ]
 
 
-def build_part_system(part_index: int) -> str:
+def build_part_system(part_index: int, user_name: str = "") -> str:
     part = PARTS[part_index]
+    name_line = (
+        f"\n\n【ユーザーのお名前】\n"
+        f"必ず「{user_name}さん」と名前で呼んでください。絶対に省略しないこと。"
+        if user_name else ""
+    )
     return (
         TAKAMI_SYSTEM_PROMPT
+        + name_line
         + f"\n\n【現在のDAY】\n"
         + f"DAY {part['id']} / {TOTAL_PARTS}：{part['name']}\n"
         + f"テーマ：{part['theme']}\n"
@@ -46,6 +52,7 @@ class SessionManager:
         # 各DAY開始時点のhistoryインデックスを記録（やり直し用）
         self.day_start_indices: list[int] = [0]
         self.restart_counts: dict[int, int] = {}  # {day_index: 使用済み回数}
+        self.user_name: str = ""
 
     @property
     def current_part(self) -> dict:
@@ -63,8 +70,11 @@ class SessionManager:
     def overall_progress_pct(self) -> int:
         return int(self.completed_days / TOTAL_PARTS * 100)
 
-    def start(self) -> str:
+    def start(self, user_name: str = "") -> str:
+        self.user_name = user_name
         opening = get_opening_message(0)
+        if user_name:
+            opening = opening.replace("はじめまして！", f"はじめまして、{user_name}さん！", 1)
         self.history.append({"role": "assistant", "content": opening})
         return opening
 
@@ -126,7 +136,7 @@ class SessionManager:
         self.day_just_completed = False
         self.history.append({"role": "user", "content": user_message})
 
-        system = build_part_system(self.part_index)
+        system = build_part_system(self.part_index, self.user_name)
         response = self.client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=2048,
@@ -207,6 +217,7 @@ class SessionManager:
             "route": self.route,
             "day_start_indices": self.day_start_indices,
             "restart_counts": self.restart_counts,
+            "user_name": self.user_name,
         }
 
     @classmethod
@@ -222,6 +233,7 @@ class SessionManager:
         # JSONはdictキーを文字列に変換するためintに戻す
         raw = data.get("restart_counts", {})
         mgr.restart_counts = {int(k): v for k, v in raw.items()}
+        mgr.user_name = data.get("user_name", "")
         return mgr
 
     def _extract_part_summary(self) -> str:
