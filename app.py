@@ -582,7 +582,7 @@ def show_chat():
             st.rerun()
     elif not mgr.finished:
         # 下部固定チャット入力
-        user_input = st.chat_input("思ったことをそのまま書いてください...")
+        user_input = st.chat_input("思ったことをそのまま書いてください...（Enterで送信）")
         if user_input:
             st.session_state.messages.append({"role": "user", "content": user_input})
             with st.spinner("たかみが考えています..."):
