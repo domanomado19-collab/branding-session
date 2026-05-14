@@ -368,6 +368,7 @@ def show_home():
 def show_chat():
     mgr: SessionManager = st.session_state.manager
     current_day = mgr.part_index + 1
+    completed_day = mgr.completed_days  # DAY完了数（完了直後はこちらを表示）
 
     # サイドバー
     with st.sidebar:
@@ -376,9 +377,13 @@ def show_chat():
             _persist()
             st.rerun()
         st.markdown("---")
-        st.markdown(f"#### DAY {current_day}　{mgr.current_part['name']}")
-        st.caption("質問への深掘りが終わったら、たかみが今日のまとめをして次のDAYへ進みます。")
-        if current_day == 1:
+        if mgr.day_just_completed:
+            st.markdown(f"#### DAY {completed_day} 完了！")
+            st.caption("下のボタンからブランディングノートを確認できます。")
+        else:
+            st.markdown(f"#### DAY {current_day}　{mgr.current_part['name']}")
+            st.caption("質問への深掘りが終わったら、たかみが今日のまとめをして次のDAYへ進みます。")
+        if current_day == 1 and not mgr.day_just_completed:
             st.markdown("---")
             st.markdown("**働き方タイプ（参考）**")
             st.markdown("""
@@ -389,10 +394,13 @@ def show_chat():
 👑 <b>ディレクター型</b>
 </div>""", unsafe_allow_html=True)
 
-    st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")
+    if mgr.day_just_completed:
+        st.markdown(f"##### DAY {completed_day} 完了！")
+    else:
+        st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")
 
     # DAY開始時にワークシートを表示（最初のメッセージが1件のみ＝開始直後）
-    if len(st.session_state.messages) == 1:
+    if len(st.session_state.messages) == 1 and not mgr.day_just_completed:
         _show_worksheet(current_day, mgr.route)
 
     st.markdown("---")
@@ -413,7 +421,24 @@ def show_chat():
                 unsafe_allow_html=True,
             )
 
-    if not mgr.finished:
+    if mgr.day_just_completed:
+        # DAY完了後：ブランディングノートへのボタンを表示
+        st.markdown("---")
+        if mgr.finished:
+            btn_label = "3DAYSまとめノートを見る"
+        else:
+            btn_label = f"DAY{completed_day} ブランディングノートを見る"
+        if st.button(btn_label, type="primary", use_container_width=True):
+            if mgr.finished:
+                with st.spinner("ブランディングシートを作成しています..."):
+                    st.session_state.sheet = generate_branding_sheet(mgr.part_summaries)
+                st.session_state.screen = "summary"
+            else:
+                st.session_state.screen = "day_complete"
+            _persist()
+            st.rerun()
+    elif not mgr.finished:
+        # 通常のチャット入力フォーム
         with st.form("chat_form", clear_on_submit=True):
             user_input = st.text_area(
                 "あなたの答え",
@@ -428,23 +453,8 @@ def show_chat():
             with st.spinner("たかみが考えています..."):
                 reply, day_done = mgr.send(user_input.strip())
             st.session_state.messages.append({"role": "assistant", "content": reply})
-
-            if mgr.finished:
-                with st.spinner("ブランディングシートを作成しています..."):
-                    st.session_state.sheet = generate_branding_sheet(mgr.part_summaries)
-                st.session_state.screen = "summary"
-            elif day_done:
-                st.session_state.screen = "day_complete"
-
             _persist()
             st.rerun()
-    else:
-        with st.spinner("ブランディングシートを作成しています..."):
-            if not st.session_state.sheet:
-                st.session_state.sheet = generate_branding_sheet(mgr.part_summaries)
-        st.session_state.screen = "summary"
-        _persist()
-        st.rerun()
 
 
 # ── 画面4：DAY完了 ────────────────────────────────────────────────────────────
@@ -481,7 +491,7 @@ def show_day_complete():
     st.markdown("### DAY {} ブランディングノート".format(completed))
     with st.spinner("ブランディングノートを作成しています..."):
         summary_text = mgr.part_summaries[-1] if mgr.part_summaries else ""
-        note_img = generate_note_image(completed, mgr.route, summary_text)
+        note_img = generate_note_image(completed, mgr.route, summary_text, mgr.history)
     st.image(note_img, use_container_width=True)
     st.download_button(
         label="ブランディングノートをダウンロード（PNG）",
