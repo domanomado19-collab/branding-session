@@ -3,16 +3,14 @@ import os
 import anthropic
 from .persona import TAKAMI_SYSTEM_PROMPT, PARTS, TOTAL_PARTS
 
+# DAY終了を検知するマーカー（誤検知を防ぐため具体的なフレーズに絞る）
 _DAY_END_MARKERS = [
     "今日はここまでにしましょう",
-    "お疲れ様でした",
     "次のDAYに進みますか",
-    "今日はここで終わりにして",
-    "全5DAY",
+    "今日はここで終わりにして、また",
     "全3DAYS",
     "3DAYSセルフブランディングセッションまとめ",
 ]
-
 
 
 def build_part_system(part_index: int) -> str:
@@ -38,6 +36,8 @@ class SessionManager:
         self.part_summaries: list[str] = []
         self.finished: bool = False
         self.day_just_completed: bool = False
+        # 各DAY開始時点のhistoryインデックスを記録（やり直し用）
+        self.day_start_indices: list[int] = [0]
 
     @property
     def current_part(self) -> dict:
@@ -63,7 +63,28 @@ class SessionManager:
     def resume_day(self) -> str:
         """次のDAYを開始して冒頭メッセージを返す。"""
         self.day_just_completed = False
+        # このDAYの開始インデックスを記録
+        if len(self.day_start_indices) <= self.part_index:
+            self.day_start_indices.append(len(self.history))
         opening = get_opening_message(self.part_index)
+        self.history.append({"role": "assistant", "content": opening})
+        return opening
+
+    def restart_day(self, day_index: int) -> str:
+        """指定したDAY（0-indexed）をやり直す。それ以降の履歴と要約をリセット。"""
+        # historyをそのDAYの開始時点まで巻き戻す
+        if day_index < len(self.day_start_indices):
+            self.history = self.history[:self.day_start_indices[day_index]]
+        elif day_index == 0:
+            self.history = []
+
+        self.part_index = day_index
+        self.part_summaries = self.part_summaries[:day_index]
+        self.day_start_indices = self.day_start_indices[:day_index + 1]
+        self.finished = False
+        self.day_just_completed = False
+
+        opening = get_opening_message(day_index)
         self.history.append({"role": "assistant", "content": opening})
         return opening
 
@@ -97,6 +118,9 @@ class SessionManager:
 
         if self.part_index < TOTAL_PARTS - 1:
             self.part_index += 1
+            # 次のDAY開始インデックスを記録
+            if len(self.day_start_indices) <= self.part_index:
+                self.day_start_indices.append(len(self.history))
         else:
             self.finished = True
 
@@ -107,6 +131,7 @@ class SessionManager:
             "part_summaries": self.part_summaries,
             "finished": self.finished,
             "day_just_completed": self.day_just_completed,
+            "day_start_indices": self.day_start_indices,
         }
 
     @classmethod
@@ -117,6 +142,7 @@ class SessionManager:
         mgr.part_summaries = data["part_summaries"]
         mgr.finished = data["finished"]
         mgr.day_just_completed = data.get("day_just_completed", False)
+        mgr.day_start_indices = data.get("day_start_indices", [0])
         return mgr
 
     def _extract_part_summary(self) -> str:

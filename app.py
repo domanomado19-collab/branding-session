@@ -284,13 +284,23 @@ def show_home():
     # DAYカード一覧
     for i, part in enumerate(PARTS):
         if i < completed:
-            st.markdown(
-                f'<div class="day-card day-card-done">'
-                f'✅ <strong>DAY {part["id"]}　{part["name"]}</strong><br>'
-                f'<span style="color:#666;font-size:13px;">{part["theme"]} — 完了</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+            col_card, col_btn = st.columns([4, 1])
+            with col_card:
+                st.markdown(
+                    f'<div class="day-card day-card-done">'
+                    f'✅ <strong>DAY {part["id"]}　{part["name"]}</strong><br>'
+                    f'<span style="color:#666;font-size:13px;">{part["theme"]} — 完了</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            with col_btn:
+                st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+                if st.button("やり直す", key=f"restart_{i}", use_container_width=True):
+                    opening = mgr.restart_day(i)
+                    st.session_state.messages = [{"role": "assistant", "content": opening}]
+                    st.session_state.screen = "chat"
+                    _persist()
+                    st.rerun()
         elif i == mgr.part_index and not mgr.finished:
             st.markdown(
                 f'<div class="day-card day-card-active">'
@@ -439,17 +449,18 @@ def show_day_complete():
 
     st.markdown("---")
     st.markdown(f"**次のセッション：DAY {next_day_num}　{PARTS[mgr.part_index]['name']}**")
+    st.markdown("このまま続けますか？それとも今日はここで終わりにしますか？")
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button(f"続けてDAY {next_day_num} へ進む", type="primary", use_container_width=True):
+        if st.button(f"このまま続ける（DAY {next_day_num} へ）", type="primary", use_container_width=True):
             opening = mgr.resume_day()
             st.session_state.messages = [{"role": "assistant", "content": opening}]
             st.session_state.screen = "chat"
             _persist()
             st.rerun()
     with col2:
-        if st.button("マイページで進捗を確認する", use_container_width=True):
+        if st.button("マイページに戻る", use_container_width=True):
             st.session_state.screen = "home"
             _persist()
             st.rerun()
