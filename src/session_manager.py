@@ -109,6 +109,19 @@ class SessionManager:
         self.history.append({"role": "assistant", "content": opening})
         return opening
 
+    def _api_messages(self) -> list[dict]:
+        """APIに渡す履歴を返す。先頭はuserである必要があるため調整する。"""
+        msgs = self.history[:]
+        # Anthropic API: 最初のメッセージはuserでなければならない
+        while msgs and msgs[0]["role"] != "user":
+            msgs = msgs[1:]
+        # 長すぎる場合は直近60件に絞る（先頭がuserになるよう再調整）
+        if len(msgs) > 60:
+            msgs = msgs[-60:]
+            while msgs and msgs[0]["role"] != "user":
+                msgs = msgs[1:]
+        return msgs
+
     def send(self, user_message: str) -> tuple[str, bool]:
         self.day_just_completed = False
         self.history.append({"role": "user", "content": user_message})
@@ -118,7 +131,7 @@ class SessionManager:
             model="claude-sonnet-4-6",
             max_tokens=2048,
             system=system,
-            messages=self.history,
+            messages=self._api_messages(),
         )
         reply = response.content[0].text
         self.history.append({"role": "assistant", "content": reply})
@@ -153,11 +166,17 @@ class SessionManager:
         else:
             self.finished = True
 
+    def _current_day_history(self) -> list[dict]:
+        """現在のDAYの会話履歴だけを返す。"""
+        start = self.day_start_indices[self.part_index] if self.part_index < len(self.day_start_indices) else 0
+        return self.history[start:]
+
     def _detect_route(self) -> str:
         """DAY1の会話からルートを判定する。"""
+        day1_history = self._current_day_history()
         history_text = "\n".join(
             f"{'User' if m['role'] == 'user' else 'AI'}: {m['content']}"
-            for m in self.history
+            for m in day1_history
         )
         prompt = (
             "以下はDAY1の会話記録です。ユーザーの現在地と目指す方向から、最も適切なルートを1つだけ選んでください。\n"
@@ -207,6 +226,7 @@ class SessionManager:
 
     def _extract_part_summary(self) -> str:
         part = self.current_part
+        day_msgs = self._current_day_history()
         extract_prompt = (
             f"以下はDAY「{part['name']}」の会話記録です。\n"
             "ユーザーが話した内容から、ブランディングに役立つ重要なポイントを箇条書きで3〜5つにまとめてください。\n"
@@ -214,7 +234,7 @@ class SessionManager:
             "【会話記録】\n"
             + "\n".join(
                 f"{'User' if m['role'] == 'user' else 'たかみ'}: {m['content']}"
-                for m in self.history
+                for m in day_msgs
             )
         )
         res = self.client.messages.create(
