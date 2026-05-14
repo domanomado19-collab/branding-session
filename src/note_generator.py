@@ -229,6 +229,33 @@ def generate_note_image(day: int, route: str, summary: str) -> bytes:
             draw.text((MARGIN + 20, y + 25), sec, font=f_label, fill=NAVY)
             y += box_h + 10
 
+    # ── ロードマップセクション ─────────────────────────────────────────────
+    if y < H - 250:
+        y += 10
+        draw.text((MARGIN, y), "ROADMAP", font=f_label, fill=GOLD)
+        y += 45
+        draw.rectangle([MARGIN, y, W - MARGIN, y + 2], fill=GOLD)
+        y += 16
+
+        steps = [
+            ("現在", NAVY),
+            ("1年後", (80, 120, 180)),
+            ("3年後", GOLD),
+        ]
+        step_w = (content_w - 20) // 3
+        for idx, (label, color) in enumerate(steps):
+            sx = MARGIN + idx * (step_w + 10)
+            draw.rectangle([sx, y, sx + step_w, y + 90], fill=LIGHT, outline=color, width=2)
+            draw.rectangle([sx, y, sx + step_w, y + 34], fill=color)
+            # ラベルを中央揃え
+            bbox = f_label.getbbox(label)
+            lw = bbox[2] - bbox[0]
+            draw.text((sx + (step_w - lw) // 2, y + 6), label, font=f_label, fill=WHITE)
+            # 矢印
+            if idx < 2:
+                draw.text((sx + step_w + 2, y + 35), "->", font=f_body, fill=GRAY)
+        y += 110
+
     # ── フッター ─────────────────────────────────────────────────────────
     draw.rectangle([0, H - 60, W, H], fill=NAVY)
     draw.text((MARGIN, H - 42), "BRANDING NOTE", font=f_small, fill=GOLD)

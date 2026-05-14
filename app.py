@@ -493,13 +493,36 @@ def show_day_complete():
         use_container_width=True,
     )
 
+    # DAY3完了時はLINEボタンを表示
+    if mgr.finished:
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,#3d3a8c,#5a56b0);border-radius:16px;'
+            'padding:24px;text-align:center;margin:16px 0;">'
+            '<p style="color:#fff;font-size:16px;margin-bottom:8px;">'
+            'ここまでできた仮説を、もっと深く一緒に整理しませんか？</p>'
+            '<p style="color:rgba(255,255,255,0.8);font-size:14px;margin-bottom:16px;">'
+            '肩書き・商品設計・発信・価格設計など、個別相談でサポートします。</p>'
+            '<a href="https://lin.ee/yZCe0OW" target="_blank" style="'
+            'display:inline-block;background:#06C755;color:#fff;font-weight:bold;'
+            'font-size:18px;padding:14px 40px;border-radius:50px;text-decoration:none;">'
+            'LINEで個別相談に申し込む</a>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
     st.markdown("---")
-    st.markdown(f"**次のセッション：DAY {next_day_num}　{PARTS[mgr.part_index]['name']}**")
+    if not mgr.finished:
+        st.markdown(f"**次のセッション：DAY {next_day_num}　{PARTS[mgr.part_index]['name']}**")
     st.markdown("このまま続けますか？それとも今日はここで終わりにしますか？")
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button(f"このまま続ける（DAY {next_day_num} へ）", type="primary", use_container_width=True):
+        if mgr.finished:
+            if st.button("ブランディングノートを見る", type="primary", use_container_width=True):
+                st.session_state.screen = "summary"
+                _persist()
+                st.rerun()
+        elif st.button(f"このまま続ける（DAY {next_day_num} へ）", type="primary", use_container_width=True):
             opening = mgr.resume_day()
             st.session_state.messages = [{"role": "assistant", "content": opening}]
             st.session_state.screen = "chat"
@@ -555,7 +578,7 @@ def show_summary():
 
     sections = [
         ("POSITION", "現在地と目指す方向", sheet.get("position", "")),
-        ("ROUTE", "あなたのルート", sheet.get("route", "")),
+        ("ROADMAP", "ロードマップ（現在→1年後→3年後）", sheet.get("roadmap", "")),
         ("TARGET", "選ばれたい相手", sheet.get("target", "")),
         ("VALUE", "提供できること", sheet.get("value", "")),
         ("REASON", "自分だからこその理由", sheet.get("reason", "")),
@@ -576,13 +599,30 @@ def show_summary():
                 unsafe_allow_html=True,
             )
 
+    # ── LINEコンバージョンボタン ─────────────────────────────────────────
+    st.markdown("---")
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#3d3a8c,#5a56b0);border-radius:16px;'
+        'padding:24px;text-align:center;margin:16px 0;">'
+        '<p style="color:#fff;font-size:16px;margin-bottom:8px;">'
+        'ここまでできた仮説を、もっと深く一緒に整理しませんか？</p>'
+        '<p style="color:rgba(255,255,255,0.8);font-size:14px;margin-bottom:16px;">'
+        '肩書き・商品設計・発信・価格設計など、個別相談でサポートします。</p>'
+        '<a href="https://lin.ee/yZCe0OW" target="_blank" style="'
+        'display:inline-block;background:#06C755;color:#fff;font-weight:bold;'
+        'font-size:18px;padding:14px 40px;border-radius:50px;text-decoration:none;">'
+        'LINEで個別相談に申し込む</a>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
     st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
         st.download_button(
             label="テキストでダウンロード",
             data=_sheet_to_text(sheet).encode("utf-8"),
-            file_name="branding_sheet.txt",
+            file_name="branding_note.txt",
             mime="text/plain",
             use_container_width=True,
         )

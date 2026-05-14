@@ -23,6 +23,13 @@ def generate_branding_sheet(part_summaries: list[str]) -> dict:
 ## 現在地と目指す方向
 現在地（〇〇型）と目指したい方向（〇〇型）を1〜2文でまとめる。
 
+## ロードマップ
+セッションの内容をもとに、以下の時系列で整理する（各1〜2文）：
+・現在：今の働き方・ステージ
+・1年後：目指したい姿（具体的なアクションや変化）
+・3年後：理想の姿（どのタイプの働き方になっていたいか）
+ユーザーの言葉を活かして、前向きで具体的に書く。
+
 ## ルート
 side_job / inhouse / specialist / business_owner のどれかを記載。
 
@@ -64,6 +71,7 @@ side_job / inhouse / specialist / business_owner のどれかを記載。
 def _parse_sheet(text: str) -> dict:
     sections = {
         "position": "",
+        "roadmap": "",
         "route": "",
         "target": "",
         "value": "",
@@ -78,6 +86,7 @@ def _parse_sheet(text: str) -> dict:
 
     mappings = {
         "現在地と目指す方向": "position",
+        "ロードマップ": "roadmap",
         "ルート": "route",
         "選ばれたい相手": "target",
         "提供できること": "value",
