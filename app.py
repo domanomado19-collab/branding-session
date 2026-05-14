@@ -440,8 +440,8 @@ AIとの対話のあと、自分の言葉でノートに書き出してみると
     st.markdown("---")
 
     # ── ブランディングノートのダウンロード ───────────────────────────
-    st.markdown("### ブランディングノートをダウンロード")
-    _note_guide_section(route="")
+    with st.expander("ブランディングノートをダウンロードする（手書き記入用）"):
+        _note_guide_section(route="")
 
     st.markdown("---")
 
