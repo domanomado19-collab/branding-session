@@ -692,11 +692,21 @@ def show_chat():
         user_input = st.chat_input("思ったことをそのまま書いてください...（Enterで送信）")
         if user_input:
             st.session_state.messages.append({"role": "user", "content": user_input})
-            with st.spinner("たかみが考えています..."):
-                reply, day_done = mgr.send(user_input)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-            _persist()
-            st.rerun()
+            try:
+                with st.spinner("たかみが考えています..."):
+                    reply, day_done = mgr.send(user_input)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                _persist()
+                st.rerun()
+            except Exception as e:
+                st.session_state.messages.pop()  # 追加したuserメッセージを戻す
+                api_msgs = mgr._api_messages()
+                st.error(
+                    f"**送信エラー** `{type(e).__name__}`\n\n"
+                    f"- 送信メッセージ数: {len(api_msgs)}\n"
+                    f"- 先頭ロール: `{api_msgs[0]['role'] if api_msgs else 'empty'}`\n"
+                    f"- エラー詳細: `{str(e)[:300]}`"
+                )
 
 
 # ── 画面4：DAY完了 ────────────────────────────────────────────────────────────
