@@ -3,13 +3,19 @@ import os
 import anthropic
 from .persona import TAKAMI_SYSTEM_PROMPT, PARTS, TOTAL_PARTS
 
-# DAY終了を検知するマーカー（誤検知を防ぐため具体的なフレーズに絞る）
-_DAY_END_MARKERS = [
-    "今日はここまでにしましょう",
-    "次のDAYに進みますか",
-    "今日はここで終わりにして、また",
-    "全3DAYS",
+# DAY終了を検知するマーカー
+# 誤検知を防ぐため「2つ以上マッチ」または「確定フレーズ1つ」で終了と判定する
+_DAY_END_DEFINITE = [
+    # これ1つで確定（非常に具体的なフレーズのみ）
     "3DAYSセルフブランディングセッションまとめ",
+    "全3DAYS、本当にお疲れ様でした",
+]
+_DAY_END_SOFT = [
+    # これが2つ以上揃ったら終了
+    "今日はここまでにしましょう",
+    "お疲れ様でした",
+    "次のDAYに進みますか",
+    "今日はここで終わりにして",
 ]
 
 
@@ -110,7 +116,12 @@ class SessionManager:
         return reply, day_done
 
     def _detect_day_end(self, text: str) -> bool:
-        return any(marker in text for marker in _DAY_END_MARKERS)
+        # 確定フレーズが1つでもあれば終了
+        if any(m in text for m in _DAY_END_DEFINITE):
+            return True
+        # ソフトマーカーが2つ以上揃ったら終了
+        soft_matches = sum(1 for m in _DAY_END_SOFT if m in text)
+        return soft_matches >= 2
 
     def _advance_day(self):
         summary = self._extract_part_summary()
