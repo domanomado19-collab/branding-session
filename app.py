@@ -226,47 +226,46 @@ def show_welcome():
             unsafe_allow_html=True,
         )
     with col_txt:
-        st.markdown("### 吉田たかみの\nブランディングセッション")
-        st.markdown("*選ばれる肩書きをつくる、3DAYSセルフブランディングノート*")
+        st.markdown("### 3days MINE BRANDING")
+        st.markdown("*by 吉田たかみ*")
     st.markdown("---")
     st.markdown("""
-このセッションでは、**吉田たかみ**があなたの壁打ち相手になります。
+<div style="background:#fdf8f0;border-left:4px solid #c9a96e;padding:16px 20px;border-radius:0 12px 12px 0;margin:8px 0 20px 0;line-height:1.9;">
+「今のわたし」のままでいいのかわからないあなたへ。<br>
+人生・経験・偏愛を掘り起こし、次に進みたい方向性を言葉にする<br>
+<strong>3日間のAI壁打ち×ブランディングノート。</strong><br><br>
+働き方の現在地を整理しながら、<br>
+<em>"誰のための何屋か"の仮説と、試しに名乗れる自己紹介まで</em>整えていきます。
+</div>
+""", unsafe_allow_html=True)
 
-チャット形式で質問に答えていくだけで、あなた自身のブランディングの軸が整理されます。
-
-**セッションの流れ（全3DAYS）**
-""")
+    st.markdown("**セッションの流れ（全3DAYS）**")
     for part in PARTS:
         st.markdown(f"- **DAY {part['id']}**　{part['name']}　—　{part['theme']}")
 
     st.markdown("---")
-    st.markdown("#### デザイナーの働き方タイプ（DAY1で確認します）")
+    st.markdown("#### あなたはどのタイプ？（DAY1で一緒に確認します）")
     st.markdown("""
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0 16px 0;">
-  <div style="background:#f0f0ff; border-radius:12px; padding:14px; border:1px solid #d0cef0;">
-    <div style="font-size:20px;">🏢</div>
-    <div style="font-weight:bold; color:#3d3a8c; font-size:14px;">会社員型</div>
-    <div style="font-size:12px; color:#555; margin-top:4px;">組織でデザインを担当。チームへの貢献が中心。</div>
-  </div>
   <div style="background:#fff8f0; border-radius:12px; padding:14px; border:1px solid #e8d4b0;">
     <div style="font-size:20px;">🌙</div>
     <div style="font-weight:bold; color:#b07030; font-size:14px;">副業スタート型</div>
-    <div style="font-size:12px; color:#555; margin-top:4px;">本業を続けながら小さく案件を受け始める。</div>
+    <div style="font-size:12px; color:#555; margin-top:6px;">今は別の仕事をしながら、週末や空き時間に小さくデザインの仕事を始めたい人。いきなり独立じゃなくて、まずは副業から試してみたい。</div>
   </div>
   <div style="background:#f0fff4; border-radius:12px; padding:14px; border:1px solid #b0dfc0;">
     <div style="font-size:20px;">🤝</div>
     <div style="font-weight:bold; color:#1a7a40; font-size:14px;">業務委託・インハウス型</div>
-    <div style="font-size:12px; color:#555; margin-top:4px;">企業に入り込み、継続的に任される。</div>
+    <div style="font-size:12px; color:#555; margin-top:6px;">特定の会社やチームに入り込んで、継続的にデザインを任されたい人。自分の名前で集客するより、信頼関係の中で仕事を続けたい。</div>
   </div>
   <div style="background:#fff0f5; border-radius:12px; padding:14px; border:1px solid #f0b0c8;">
     <div style="font-size:20px;">⭐</div>
-    <div style="font-weight:bold; color:#a0206a; font-size:14px;">自営業・専門家型</div>
-    <div style="font-size:12px; color:#555; margin-top:4px;">自分の名前・専門性で直接選ばれる。</div>
+    <div style="font-weight:bold; color:#a0206a; font-size:14px;">起業家型</div>
+    <div style="font-size:12px; color:#555; margin-top:6px;">自分の名前や専門性を前面に出して、直接お客さんから選ばれたい人。「〇〇といえばこの人」という専門家ポジションを作りたい。</div>
   </div>
   <div style="background:#f5f0ff; border-radius:12px; padding:14px; border:1px solid #c8b0f0; grid-column:1/-1;">
     <div style="font-size:20px;">👑</div>
-    <div style="font-weight:bold; color:#5a20a0; font-size:14px;">経営者・チーム型</div>
-    <div style="font-size:12px; color:#555; margin-top:4px;">チームや仕組みで価値を届ける。思想・メソッドの言語化が鍵。</div>
+    <div style="font-weight:bold; color:#5a20a0; font-size:14px;">ディレクター型</div>
+    <div style="font-size:12px; color:#555; margin-top:6px;">自分一人で作業するより、チームを作ったり仕組みを整えたりして、もっと大きく価値を届けたい人。デザイナーから、プロデューサーや事業家へステップアップしたい。</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -384,11 +383,10 @@ def show_chat():
             st.markdown("**働き方タイプ（参考）**")
             st.markdown("""
 <div style="font-size:12px;">
-🏢 <b>会社員型</b><br>
 🌙 <b>副業スタート型</b><br>
-🤝 <b>業務委託・インハウス型</b><br>
-⭐ <b>自営業・専門家型</b><br>
-👑 <b>経営者・チーム型</b>
+🤝 <b>業務委託型</b><br>
+⭐ <b>起業家型</b><br>
+👑 <b>ディレクター型</b>
 </div>""", unsafe_allow_html=True)
 
     st.markdown(f"##### DAY {current_day} / {TOTAL_PARTS}　{mgr.current_part['name']}")

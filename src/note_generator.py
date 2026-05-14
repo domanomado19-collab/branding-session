@@ -17,9 +17,9 @@ FONT_PATH = Path(__file__).parent.parent / "assets" / "fonts" / "NotoSansJP.otf"
 # ルート表示名マッピング
 ROUTE_LABEL = {
     "side_job":       "副業スタート型",
-    "inhouse":        "業務委託・インハウス型",
-    "specialist":     "自営業・専門家型",
-    "business_owner": "経営者・チーム型",
+    "inhouse":        "業務委託型",
+    "specialist":     "起業家型",
+    "business_owner": "ディレクター型",
 }
 
 DAY_TITLE = {
