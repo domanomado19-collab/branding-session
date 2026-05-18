@@ -393,21 +393,23 @@ AIとの壁打ちのあとに、自分の言葉でノートにまとめてみる
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
-def _load_hero_b64() -> str | None:
-    """ヒーロー画像をbase64で返す。ファイルがなければNone。"""
-    hero_path = Path(__file__).parent / "assets" / "hero.jpg"
-    if hero_path.exists():
-        with open(hero_path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return None
+def _load_hero_b64() -> tuple[str, str] | tuple[None, None]:
+    """ヒーロー画像をbase64とMIMEタイプで返す。ファイルがなければ(None, None)。"""
+    assets = Path(__file__).parent / "assets"
+    for fname, mime in [("hero.png", "image/png"), ("hero.jpg", "image/jpeg")]:
+        p = assets / fname
+        if p.exists():
+            with open(p, "rb") as f:
+                return base64.b64encode(f.read()).decode(), mime
+    return None, None
 
-HERO_IMG = _load_hero_b64()
+HERO_IMG, HERO_MIME = _load_hero_b64()
 
 def show_welcome():
     # ── メインビジュアル ──────────────────────────────────────────────
     if HERO_IMG:
         st.markdown(
-            f'<img src="data:image/jpeg;base64,{HERO_IMG}" '
+            f'<img src="data:{HERO_MIME};base64,{HERO_IMG}" '
             f'style="width:100%;border-radius:12px;display:block;margin-bottom:8px;">',
             unsafe_allow_html=True,
         )
