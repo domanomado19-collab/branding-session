@@ -47,7 +47,7 @@ st.markdown(f"""
         height: 44px;
         border-radius: 50%;
         object-fit: cover;
-        object-position: top;
+        object-position: 50% 20%;
         flex-shrink: 0;
         border: 2px solid #c9a96e;
         margin-top: 2px;
@@ -387,7 +387,7 @@ def show_welcome():
         st.markdown(
             f'<img src="data:image/jpeg;base64,{AVATAR}" '
             f'style="width:120px;height:120px;border-radius:50%;object-fit:cover;'
-            f'object-position:top;border:3px solid #c9a96e;display:block;margin:0 auto;">',
+            f'object-position:50% 20%;border:3px solid #c9a96e;display:block;margin:0 auto;">',
             unsafe_allow_html=True,
         )
     with col_txt:
@@ -495,7 +495,7 @@ def show_home():
         st.markdown(
             f'<img src="data:image/jpeg;base64,{AVATAR}" '
             f'style="width:80px;height:80px;border-radius:50%;object-fit:cover;'
-            f'object-position:top;border:2px solid #c9a96e;display:block;margin:0 auto;">',
+            f'object-position:50% 20%;border:2px solid #c9a96e;display:block;margin:0 auto;">',
             unsafe_allow_html=True,
         )
     with col_txt:
