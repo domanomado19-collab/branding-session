@@ -393,27 +393,43 @@ AIとの壁打ちのあとに、自分の言葉でノートにまとめてみる
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
+def _load_hero_b64() -> str | None:
+    """ヒーロー画像をbase64で返す。ファイルがなければNone。"""
+    hero_path = Path(__file__).parent / "assets" / "hero.jpg"
+    if hero_path.exists():
+        with open(hero_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return None
+
+HERO_IMG = _load_hero_b64()
+
 def show_welcome():
-    # ヘッダー：写真＋タイトル
-    col_img, col_txt = st.columns([1, 2])
-    with col_img:
+    # ── メインビジュアル ──────────────────────────────────────────────
+    if HERO_IMG:
         st.markdown(
-            f'<img src="data:image/jpeg;base64,{AVATAR}" '
-            f'style="width:120px;height:120px;border-radius:50%;object-fit:cover;'
-            f'object-position:50% 20%;border:3px solid #c9a96e;display:block;margin:0 auto;">',
+            f'<img src="data:image/jpeg;base64,{HERO_IMG}" '
+            f'style="width:100%;border-radius:12px;display:block;margin-bottom:8px;">',
             unsafe_allow_html=True,
         )
-    with col_txt:
-        st.markdown("### 3days MINE BRANDING")
-        st.markdown("*by 吉田たかみ*")
-    st.markdown("---")
-    st.markdown("""
+    else:
+        # 画像がない場合はテキストヘッダー
+        col_img, col_txt = st.columns([1, 2])
+        with col_img:
+            st.markdown(
+                f'<img src="data:image/jpeg;base64,{AVATAR}" '
+                f'style="width:120px;height:120px;border-radius:50%;object-fit:cover;'
+                f'object-position:50% 20%;border:3px solid #c9a96e;display:block;margin:0 auto;">',
+                unsafe_allow_html=True,
+            )
+        with col_txt:
+            st.markdown("### 3days MINE BRANDING")
+            st.markdown("*by 吉田たかみ*")
+        st.markdown("---")
+        st.markdown("""
 <div style="background:#fdf8f0;border-left:4px solid #c9a96e;padding:16px 20px;border-radius:0 12px 12px 0;margin:8px 0 20px 0;line-height:1.9;">
 「今のわたし」のままでいいのかわからないあなたへ。<br>
 人生・経験・偏愛を掘り起こし、次に進みたい方向性を言葉にする<br>
-<strong>3日間のAI壁打ち×ブランディングノート。</strong><br><br>
-働き方の現在地を整理しながら、<br>
-<em>"誰のための何屋か"の仮説と、試しに名乗れる自己紹介まで</em>整えていきます。
+<strong>3日間のAI壁打ち×ブランディングノート。</strong>
 </div>
 """, unsafe_allow_html=True)
 
