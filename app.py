@@ -190,6 +190,12 @@ def _scroll_top():
         height=0,
     )
 
+def _scroll_bottom():
+    _components.html(
+        "<script>setTimeout(()=>{const m=window.parent.document.querySelector('section.main');if(m)m.scrollTo(0,m.scrollHeight);},150);</script>",
+        height=0,
+    )
+
 
 def _persist():
     mgr: SessionManager | None = st.session_state.get("manager")
@@ -250,6 +256,12 @@ def _find_summary_message(history: list, day: int) -> str:
     return ""
 
 
+def _clean_value(text: str) -> str:
+    """マークダウンの ** や * を除去して値を整形する。"""
+    import re
+    return re.sub(r'\*+', '', text).strip()
+
+
 def _parse_labeled_lines(text: str, labels: list[str]) -> list[tuple[str, str]]:
     """「ラベル：値」形式の行を順番に抽出して (ラベル, 値) リストで返す。"""
     results = []
@@ -257,7 +269,8 @@ def _parse_labeled_lines(text: str, labels: list[str]) -> list[tuple[str, str]]:
     for label in labels:
         for line in lines:
             if label in line and "：" in line:
-                value = line.split("：", 1)[1].strip()
+                raw = line.split("：", 1)[1]
+                value = _clean_value(raw)
                 if value:
                     results.append((label, value))
                     break
@@ -612,9 +625,11 @@ def show_chat():
     current_day = mgr.part_index + 1
     completed_day = mgr.completed_days  # DAY完了数（完了直後はこちらを表示）
 
-    # ── 新規DAY開始時はページ上部へスクロール ────────────────────────
+    # ── スクロール制御 ────────────────────────────────────────────────
     if st.session_state.pop("scroll_chat_top", False):
         _scroll_top()
+    elif st.session_state.pop("scroll_chat_bottom", False):
+        _scroll_bottom()
 
     # サイドバー
     remaining = _remaining_days()
@@ -704,6 +719,8 @@ def show_chat():
                 with st.spinner("たかみが考えています..."):
                     reply, day_done = mgr.send(user_input)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
+                if mgr.day_just_completed:
+                    st.session_state.scroll_chat_bottom = True  # DAY完了→ボタンが見える位置へ
                 _persist()
                 st.rerun()
             except Exception as e:
@@ -751,8 +768,11 @@ def show_day_complete():
     st.markdown(f"### DAY {completed} ブランディングノート")
 
     day_content = _extract_day_content(mgr.history, completed, mgr.route)
-    if day_content:
-        for label, value in day_content:
+    # 値が空のフィールドを除外
+    day_content_clean = [(lbl, val) for lbl, val in day_content if val]
+
+    if day_content_clean:
+        for label, value in day_content_clean:
             st.markdown(
                 f'<div class="sheet-section">'
                 f'<div class="sheet-label">{label}</div>'
@@ -760,12 +780,21 @@ def show_day_complete():
                 f'</div>',
                 unsafe_allow_html=True,
             )
+        # 抽出できなかったフィールドがある場合は振り返り全文も補足表示
+        if len(day_content_clean) < len(day_content):
+            recap = _find_summary_message(mgr.history, completed)
+            if recap:
+                with st.expander("振り返り全文を見る"):
+                    st.markdown(recap)
     else:
-        # パース失敗時はサマリー全文を表示
-        fallback = mgr.part_summaries[-1] if mgr.part_summaries else ""
-        st.markdown(fallback)
+        # パース完全失敗時→振り返り全文をそのまま表示
+        recap = _find_summary_message(mgr.history, completed)
+        if recap:
+            st.markdown(recap)
+        else:
+            st.markdown(mgr.part_summaries[-1] if mgr.part_summaries else "")
 
-    note_txt = _day_note_to_text(completed, mgr.route, day_content)
+    note_txt = _day_note_to_text(completed, mgr.route, day_content_clean)
     st.download_button(
         label=f"DAY{completed} ブランディングノートをテキストでダウンロード",
         data=note_txt.encode("utf-8"),
