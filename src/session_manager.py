@@ -182,14 +182,29 @@ class SessionManager:
         return self.history[start:]
 
     def _detect_route(self) -> str:
-        """DAY1の会話からルートを判定する。"""
+        """DAY1の診断結果メッセージ内の【〇〇型】からルートを判定する。
+        見つからない場合はAPIで判定する。"""
+        # 診断結果メッセージ内の【〇〇型】を直接探す（最も確実）
+        type_map = {
+            "副業スタート型": "side_job",
+            "業務委託型":     "inhouse",
+            "起業家型":       "specialist",
+            "ディレクター型": "business_owner",
+        }
+        for msg in reversed(self.history):
+            if msg["role"] == "assistant":
+                for label, route in type_map.items():
+                    if f"【{label}】" in msg["content"]:
+                        return route
+
+        # フォールバック：APIで判定
         day1_history = self._current_day_history()
         history_text = "\n".join(
             f"{'User' if m['role'] == 'user' else 'AI'}: {m['content']}"
             for m in day1_history
         )
         prompt = (
-            "以下はDAY1の会話記録です。ユーザーの現在地と目指す方向から、最も適切なルートを1つだけ選んでください。\n"
+            "以下はDAY1の会話記録です。AIが診断した働き方タイプから、最も適切なルートを1つ選んでください。\n"
             "回答は以下のいずれか1語のみ：side_job / inhouse / specialist / business_owner\n\n"
             f"【会話記録】\n{history_text}"
         )
