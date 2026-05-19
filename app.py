@@ -521,17 +521,14 @@ def show_home():
     completed = mgr.completed_days
     overall_pct = mgr.overall_progress_pct
 
-    col_img, col_txt = st.columns([1, 3])
-    with col_img:
+    if HERO_IMG:
         st.markdown(
-            f'<img src="data:image/jpeg;base64,{AVATAR}" '
-            f'style="width:80px;height:80px;border-radius:50%;object-fit:cover;'
-            f'object-position:50% 20%;border:2px solid #c9a96e;display:block;margin:0 auto;">',
+            f'<img src="data:{HERO_MIME};base64,{HERO_IMG}" '
+            f'style="width:100%;border-radius:12px;display:block;margin-bottom:16px;">',
             unsafe_allow_html=True,
         )
-    with col_txt:
-        st.markdown("### マイページ")
-        st.markdown(f"全体進捗：**{overall_pct}%**　（DAY {completed} / {TOTAL_PARTS} 完了）")
+    st.markdown(f"### マイページ")
+    st.markdown(f"全体進捗：**{overall_pct}%**　（DAY {completed} / {TOTAL_PARTS} 完了）")
     st.progress(completed / TOTAL_PARTS)
     st.markdown("---")
 
