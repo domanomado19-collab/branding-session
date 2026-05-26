@@ -136,6 +136,37 @@ st.markdown(f"""
 
     /* ── サイドバー ── */
     [data-testid="stSidebar"] {{ background-color: #f5f0e8; }}
+
+    /* ── プライマリボタン → ネイビー ── */
+    .stButton > button[kind="primary"],
+    div[data-testid="stButton"] > button[kind="primary"] {{
+        background-color: #1a2d5a !important;
+        border-color: #1a2d5a !important;
+        color: #fff !important;
+    }}
+    .stButton > button[kind="primary"]:hover,
+    div[data-testid="stButton"] > button[kind="primary"]:hover {{
+        background-color: #243f7a !important;
+        border-color: #243f7a !important;
+    }}
+
+    /* ── テキスト入力欄 → 視認性アップ ── */
+    div[data-testid="stTextInput"] label {{
+        font-size: 15px !important;
+        font-weight: bold !important;
+        color: #1a2d5a !important;
+    }}
+    div[data-testid="stTextInput"] input {{
+        border: 2px solid #c9a96e !important;
+        border-radius: 8px !important;
+        font-size: 15px !important;
+        padding: 10px 14px !important;
+        background: #fff !important;
+    }}
+    div[data-testid="stTextInput"] input:focus {{
+        border-color: #1a2d5a !important;
+        box-shadow: 0 0 0 2px rgba(26,45,90,0.15) !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
