@@ -12,7 +12,7 @@ def generate_branding_sheet(part_summaries: list[str]) -> dict:
         for i, summary in enumerate(part_summaries)
     )
 
-    prompt = f"""以下は「選ばれる肩書きをつくる 3DAYSセルフブランディングセッション」の記録です。
+    prompt = f"""以下は「3days MINE BRANDING」の3DAYSセッション記録です。
 この内容をもとに、以下の項目を生成してください。日本語で記述し、ユーザー自身の言葉を活かしてください。
 
 【セッション記録】
@@ -20,42 +20,38 @@ def generate_branding_sheet(part_summaries: list[str]) -> dict:
 
 ---
 
-## 現在地と目指す方向
-現在地（〇〇型）と目指したい方向（〇〇型）を1〜2文でまとめる。
+## 現状のタイプ
+side_job / inhouse / specialist / business_owner のどれかを記載（例：side_job）。
 
-## ロードマップ
-セッションの内容をもとに、以下の時系列で整理する（各1〜2文）：
-・現在：今の働き方・ステージ
-・1年後：目指したい姿（具体的なアクションや変化）
-・3年後：理想の姿（どのタイプの働き方になっていたいか）
-ユーザーの言葉を活かして、前向きで具体的に書く。
+## 今の働き方
+現在の働き方・状況を1〜2文で具体的に書く。
 
-## ルート
+## 課題・モヤモヤ
+DAY1で話してくれた課題やモヤモヤを箇条書きで3〜5つ。ユーザーの言葉を活かす。
+
+## 理想のタイプ
 side_job / inhouse / specialist / business_owner のどれかを記載。
 
-## 選ばれたい相手
-一番相性のいいクライアント・現場を2〜3文で描写する。
+## 実現したい時期
+何年後に実現したいかを記載（例：2年後）。
 
-## 提供できること
-自分が役に立てること・提供できる価値を箇条書きで3〜5つ。
+## なぜなりたいか
+そのタイプを目指す理由・動機を2〜3文で。ユーザーの言葉を活かす。
 
-## 自分だからこその理由
-なぜこの人が選ばれるのか、人生・経験・偏愛との接続を2〜3文で書く。
+## そうなれたら嬉しいこと
+理想を実現したときに何が変わって嬉しいか・どう変わるかを2〜3文で具体的に。
 
-## 肩書き仮説
-試しに名乗れる肩書き・役割名を1〜3案、箇条書きで。
+## デザインスキルのギャップ
+現状のスキルレベルと足りている部分・課題を整理し、優先度（高/中/低）と理由を記載。
 
-## 30秒自己紹介
-実際に使える自己紹介文を150字程度で。自然な文体で。
+## ブランディングのギャップ
+現状の見せ方・発信の状況と課題を整理し、優先度（高/中/低）と理由を記載。
 
-## SNSプロフィール文
-プロフィール欄に使える短い文章を80字程度で。
+## 営業・集客・ビジネス視点のギャップ
+現状の仕事の取り方・単価・集客の課題を整理し、優先度（高/中/低）と理由を記載。
 
-## 残っている不安
-まだ解決されていない不安・疑問を箇条書きで3〜5つ。
-
-## 個別相談テーマ
-次に個別相談で深めるべきテーマを1〜2文で。
+## まず取り組むべきこと
+3つのギャップを踏まえて、最初に取り組むべきことを1〜2項目、具体的にレコメンドする。なぜそれを最初に勧めるかの理由も一言添える。
 """
 
     try:
@@ -72,32 +68,32 @@ side_job / inhouse / specialist / business_owner のどれかを記載。
 
 def _parse_sheet(text: str) -> dict:
     sections = {
-        "position": "",
-        "roadmap": "",
-        "route": "",
-        "target": "",
-        "value": "",
-        "reason": "",
-        "title_hypothesis": "",
-        "intro_30sec": "",
-        "sns_profile": "",
-        "anxiety": "",
-        "consultation": "",
+        "current_type": "",
+        "current_situation": "",
+        "current_struggles": "",
+        "ideal_type": "",
+        "ideal_timeline": "",
+        "ideal_reason": "",
+        "ideal_benefits": "",
+        "design_skill_gaps": "",
+        "branding_gaps": "",
+        "business_gaps": "",
+        "priority_actions": "",
         "raw": text,
     }
 
     mappings = {
-        "現在地と目指す方向": "position",
-        "ロードマップ": "roadmap",
-        "ルート": "route",
-        "選ばれたい相手": "target",
-        "提供できること": "value",
-        "自分だからこその理由": "reason",
-        "肩書き仮説": "title_hypothesis",
-        "30秒自己紹介": "intro_30sec",
-        "SNSプロフィール文": "sns_profile",
-        "残っている不安": "anxiety",
-        "個別相談テーマ": "consultation",
+        "現状のタイプ": "current_type",
+        "今の働き方": "current_situation",
+        "課題・モヤモヤ": "current_struggles",
+        "理想のタイプ": "ideal_type",
+        "実現したい時期": "ideal_timeline",
+        "なぜなりたいか": "ideal_reason",
+        "そうなれたら嬉しいこと": "ideal_benefits",
+        "デザインスキルのギャップ": "design_skill_gaps",
+        "ブランディングのギャップ": "branding_gaps",
+        "営業・集客・ビジネス視点のギャップ": "business_gaps",
+        "まず取り組むべきこと": "priority_actions",
     }
 
     current_key = None

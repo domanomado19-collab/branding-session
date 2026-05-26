@@ -224,10 +224,9 @@ WORKSHEETS_DIR = Path(__file__).parent / "assets" / "worksheets"
 
 def _get_worksheet_path(day: int, route: str) -> Path | None:
     if day == 1:
-        return WORKSHEETS_DIR / "day1.png"
-    route_key = route if route in ("side_job", "inhouse", "specialist") else "specialist"
-    path = WORKSHEETS_DIR / f"day{day}_{route_key}.png"
-    return path if path.exists() else None
+        p = WORKSHEETS_DIR / "day1.png"
+        return p if p.exists() else None
+    return None
 
 def _show_worksheet(day: int, route: str):
     path = _get_worksheet_path(day, route)
@@ -277,6 +276,43 @@ def _parse_labeled_lines(text: str, labels: list[str]) -> list[tuple[str, str]]:
     return results
 
 
+def _parse_summary_sections(text: str, labels: list[str]) -> list[tuple[str, str]]:
+    """まとめテキストから (ラベル, 値) リストを抽出。複数行の値（箇条書き等）にも対応。"""
+    import re
+    results = []
+    lines = text.split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        matched_label = None
+        for label in labels:
+            if label in line and "：" in line:
+                matched_label = label
+                break
+        if matched_label:
+            after_colon = line.split("：", 1)[1].strip()
+            value_lines = [after_colon] if after_colon else []
+            j = i + 1
+            while j < len(lines):
+                next_line = lines[j].strip()
+                is_next_label = any(
+                    lbl in next_line and "：" in next_line
+                    for lbl in labels
+                )
+                if is_next_label or next_line.startswith("【"):
+                    break
+                if next_line:
+                    value_lines.append(next_line)
+                j += 1
+            value = re.sub(r'\*+', '', "\n".join(value_lines)).strip()
+            if value:
+                results.append((matched_label, value))
+            i = j
+        else:
+            i += 1
+    return results
+
+
 def _extract_day_content(history: list, day: int, route: str) -> list[tuple[str, str]]:
     """DAYのまとめから (セクション名, 内容) のリストを返す。"""
     text = _find_summary_message(history, day)
@@ -284,34 +320,25 @@ def _extract_day_content(history: list, day: int, route: str) -> list[tuple[str,
         return []
 
     if day == 1:
-        labels = ["現在地", "理由", "目指したい方向", "今必要な言語化", "DAY2で深掘りするテーマ"]
+        labels = ["現状のタイプ", "今の働き方", "課題・モヤモヤ"]
     elif day == 2:
-        route_labels = {
-            "specialist":     ["肩書きの種", "一番捨てきれないテーマ", "誰のための何屋", "仮の立ち位置", "残っている不安"],
-            "side_job":       ["選ばれたい相手", "提供できること", "仮の立ち位置", "残っている不安"],
-            "inhouse":        ["得意な役割", "力を発揮しやすい現場", "仮の立ち位置", "残っている不安"],
-            "business_owner": ["届けたい相手", "作りたい方向性", "仮の立ち位置", "残っている不安"],
-        }
-        labels = route_labels.get(route, ["選ばれたい相手", "提供できること", "仮の立ち位置", "残っている不安"])
+        labels = ["理想のタイプ", "実現したい時期", "なぜなりたいか", "そうなれたら嬉しいこと"]
+    elif day == 3:
+        labels = ["デザインスキルのギャップ", "ブランディングのギャップ", "営業・集客・ビジネス視点のギャップ", "まず取り組むべきこと"]
     else:
         return []
 
-    return _parse_labeled_lines(text, labels)
+    return _parse_summary_sections(text, labels)
 
 
 def _day_note_to_text(day: int, route: str, content: list[tuple[str, str]]) -> str:
     """DAYノートをテキスト形式に変換する。"""
-    route_labels = {
-        "side_job": "副業スタート型", "inhouse": "業務委託型",
-        "specialist": "起業家型", "business_owner": "ディレクター型",
-    }
     lines = [
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         f"  DAY{day} ブランディングノート",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "",
     ]
-    if route and day > 1:
-        lines.append(f"  ルート：{route_labels.get(route, route)}")
-    lines += ["━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", ""]
     for label, value in content:
         lines += [f"【{label}】", value, ""]
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -346,50 +373,14 @@ def _note_guide_section(route: str = ""):
 border-radius:0 12px 12px 0;margin:8px 0 16px 0;line-height:1.9;">
 <strong>ブランディングノートの使い方</strong><br>
 AIとの壁打ちのあとに、自分の言葉でノートにまとめてみると思考がさらに整理されます。<br>
-各DAYに対応したワークシートを印刷して、<em>手書きで書き込みながらセッションを進める</em>のがおすすめです。
+DAY1に対応したワークシートを印刷して、<em>手書きで書き込みながらセッションを進める</em>のがおすすめです。
 </div>
 """, unsafe_allow_html=True)
 
-    # DAY1は全員共通
     day1_path = WORKSHEETS_DIR / "day1.png"
     col1, col_dummy = st.columns([1, 1])
     with col1:
-        _ws_card("DAY 1 ワークシート（全ルート共通）", day1_path, "dl_day1_guide")
-
-    # DAY2・DAY3はルートが判明していれば該当シート、未定なら3種並べて表示
-    st.markdown("**DAY 2 ワークシート**（ルートが決まってから使います）")
-    if route in ("side_job", "inhouse", "specialist"):
-        path = WORKSHEETS_DIR / f"day2_{route}.png"
-        col_a, col_b = st.columns([1, 1])
-        with col_a:
-            route_label = {"side_job": "副業スタート型", "inhouse": "業務委託型", "specialist": "起業家型"}.get(route, route)
-            _ws_card(f"DAY 2 — {route_label}", path, f"dl_day2_{route}_guide")
-    else:
-        col_a, col_b, col_c = st.columns(3)
-        for col, r, lbl in zip(
-            [col_a, col_b, col_c],
-            ["side_job", "inhouse", "specialist"],
-            ["副業スタート型", "業務委託型", "起業家型"],
-        ):
-            with col:
-                _ws_card(f"DAY 2 — {lbl}", WORKSHEETS_DIR / f"day2_{r}.png", f"dl_day2_{r}_guide")
-
-    st.markdown("**DAY 3 ワークシート**（DAY2完了後に使います）")
-    if route in ("side_job", "inhouse", "specialist"):
-        path = WORKSHEETS_DIR / f"day3_{route}.png"
-        col_a, col_b = st.columns([1, 1])
-        with col_a:
-            route_label = {"side_job": "副業スタート型", "inhouse": "業務委託型", "specialist": "起業家型"}.get(route, route)
-            _ws_card(f"DAY 3 — {route_label}", path, f"dl_day3_{route}_guide")
-    else:
-        col_a, col_b, col_c = st.columns(3)
-        for col, r, lbl in zip(
-            [col_a, col_b, col_c],
-            ["side_job", "inhouse", "specialist"],
-            ["副業スタート型", "業務委託型", "起業家型"],
-        ):
-            with col:
-                _ws_card(f"DAY 3 — {lbl}", WORKSHEETS_DIR / f"day3_{r}.png", f"dl_day3_{r}_guide")
+        _ws_card("DAY 1 ワークシート", day1_path, "dl_day1_guide")
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
@@ -845,9 +836,9 @@ def show_day_complete():
             '<div style="background:linear-gradient(135deg,#3d3a8c,#5a56b0);border-radius:16px;'
             'padding:24px;text-align:center;margin:16px 0;">'
             '<p style="color:#fff;font-size:16px;margin-bottom:8px;">'
-            'ここまでできた仮説を、もっと深く一緒に整理しませんか？</p>'
+            '見えてきたギャップを、一緒に埋めていきませんか？</p>'
             '<p style="color:rgba(255,255,255,0.8);font-size:14px;margin-bottom:16px;">'
-            '肩書き・商品設計・発信・価格設計など、個別相談でサポートします。</p>'
+            'デザインスキル・ブランディング・集客など、個別相談でサポートします。</p>'
             '<a href="https://lin.ee/yZCe0OW" target="_blank" style="'
             'display:inline-block;background:#06C755;color:#fff;font-weight:bold;'
             'font-size:18px;padding:14px 40px;border-radius:50px;text-decoration:none;">'
@@ -888,21 +879,25 @@ def _sheet_to_text(sheet: dict) -> str:
 
     parts = [
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "　3DAYSセルフブランディングセッションまとめ",
+        "　3DAYS MINE BRANDING ノート",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
-        *section("現在地と目指す方向", "position"),
-        *section("あなたのルート", "route"),
-        *section("選ばれたい相手", "target"),
-        *section("提供できること", "value"),
-        *section("自分だからこその理由", "reason"),
-        *section("肩書き仮説", "title_hypothesis"),
-        *section("30秒自己紹介", "intro_30sec"),
-        *section("SNSプロフィール文", "sns_profile"),
-        *section("残っている不安", "anxiety"),
-        *section("個別相談で深めるテーマ", "consultation"),
+        "▼ DAY1：現状",
+        *section("現状のタイプ", "current_type"),
+        *section("今の働き方", "current_situation"),
+        *section("課題・モヤモヤ", "current_struggles"),
+        "▼ DAY2：理想",
+        *section("理想のタイプ", "ideal_type"),
+        *section("実現したい時期", "ideal_timeline"),
+        *section("なぜなりたいか", "ideal_reason"),
+        *section("そうなれたら嬉しいこと", "ideal_benefits"),
+        "▼ DAY3：ギャップ診断",
+        *section("デザインスキルのギャップ", "design_skill_gaps"),
+        *section("ブランディングのギャップ", "branding_gaps"),
+        *section("営業・集客・ビジネス視点のギャップ", "business_gaps"),
+        *section("まず取り組むべきこと", "priority_actions"),
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "この言葉は、あなたの人生から生まれた大切な仮説です。",
+        "現状と理想のギャップが見えたら、まず一歩踏み出しましょう。",
     ]
     return "\n".join(parts)
 
@@ -922,20 +917,47 @@ def show_summary():
     st.markdown("## あなたのブランディングノート")
     st.markdown("---")
 
-    sections = [
-        ("POSITION", "現在地と目指す方向", sheet.get("position", "")),
-        ("ROADMAP", "ロードマップ（現在→1年後→3年後）", sheet.get("roadmap", "")),
-        ("TARGET", "選ばれたい相手", sheet.get("target", "")),
-        ("VALUE", "提供できること", sheet.get("value", "")),
-        ("REASON", "自分だからこその理由", sheet.get("reason", "")),
-        ("TITLE HYPOTHESIS", "肩書き仮説", sheet.get("title_hypothesis", "")),
-        ("30秒自己紹介", "交流会・SNSで使える自己紹介", sheet.get("intro_30sec", "")),
-        ("SNS PROFILE", "SNSプロフィール文", sheet.get("sns_profile", "")),
-        ("ANXIETY", "残っている不安", sheet.get("anxiety", "")),
-        ("NEXT STEP", "個別相談で深めるテーマ", sheet.get("consultation", "")),
+    st.markdown("### DAY1：現状")
+    day1_sections = [
+        ("CURRENT TYPE", "現状のタイプ", sheet.get("current_type", "")),
+        ("NOW", "今の働き方", sheet.get("current_situation", "")),
+        ("STRUGGLES", "課題・モヤモヤ", sheet.get("current_struggles", "")),
     ]
+    for label_en, label_ja, content in day1_sections:
+        if content:
+            st.markdown(
+                f'<div class="sheet-section">'
+                f'<div class="sheet-label">{label_en}</div>'
+                f'<strong>{label_ja}</strong><br><br>{content}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
-    for label_en, label_ja, content in sections:
+    st.markdown("### DAY2：理想")
+    day2_sections = [
+        ("IDEAL TYPE", "理想のタイプ", sheet.get("ideal_type", "")),
+        ("TIMELINE", "実現したい時期", sheet.get("ideal_timeline", "")),
+        ("WHY", "なぜなりたいか", sheet.get("ideal_reason", "")),
+        ("BENEFITS", "そうなれたら嬉しいこと", sheet.get("ideal_benefits", "")),
+    ]
+    for label_en, label_ja, content in day2_sections:
+        if content:
+            st.markdown(
+                f'<div class="sheet-section">'
+                f'<div class="sheet-label">{label_en}</div>'
+                f'<strong>{label_ja}</strong><br><br>{content}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("### DAY3：ギャップ診断")
+    day3_sections = [
+        ("DESIGN SKILL", "デザインスキルのギャップ", sheet.get("design_skill_gaps", "")),
+        ("BRANDING", "ブランディングのギャップ", sheet.get("branding_gaps", "")),
+        ("BUSINESS", "営業・集客・ビジネス視点のギャップ", sheet.get("business_gaps", "")),
+        ("PRIORITY", "まず取り組むべきこと", sheet.get("priority_actions", "")),
+    ]
+    for label_en, label_ja, content in day3_sections:
         if content:
             st.markdown(
                 f'<div class="sheet-section">'
@@ -951,9 +973,9 @@ def show_summary():
         '<div style="background:linear-gradient(135deg,#3d3a8c,#5a56b0);border-radius:16px;'
         'padding:24px;text-align:center;margin:16px 0;">'
         '<p style="color:#fff;font-size:16px;margin-bottom:8px;">'
-        'ここまでできた仮説を、もっと深く一緒に整理しませんか？</p>'
+        '見えてきたギャップを、一緒に埋めていきませんか？</p>'
         '<p style="color:rgba(255,255,255,0.8);font-size:14px;margin-bottom:16px;">'
-        '肩書き・商品設計・発信・価格設計など、個別相談でサポートします。</p>'
+        'デザインスキル・ブランディング・集客など、個別相談でサポートします。</p>'
         '<a href="https://lin.ee/yZCe0OW" target="_blank" style="'
         'display:inline-block;background:#06C755;color:#fff;font-weight:bold;'
         'font-size:18px;padding:14px 40px;border-radius:50px;text-decoration:none;">'
@@ -1133,14 +1155,17 @@ def show_admin():
             if finished and sheet:
                 st.markdown("**ブランディングシート**")
                 sheet_labels = [
-                    ("現在地と目指す方向", "position"),
-                    ("ロードマップ", "roadmap"),
-                    ("選ばれたい相手", "target"),
-                    ("提供できること", "value"),
-                    ("肩書き仮説", "title_hypothesis"),
-                    ("30秒自己紹介", "intro_30sec"),
-                    ("SNSプロフィール文", "sns_profile"),
-                    ("残っている不安", "anxiety"),
+                    ("現状のタイプ", "current_type"),
+                    ("今の働き方", "current_situation"),
+                    ("課題・モヤモヤ", "current_struggles"),
+                    ("理想のタイプ", "ideal_type"),
+                    ("実現したい時期", "ideal_timeline"),
+                    ("なぜなりたいか", "ideal_reason"),
+                    ("そうなれたら嬉しいこと", "ideal_benefits"),
+                    ("デザインスキルのギャップ", "design_skill_gaps"),
+                    ("ブランディングのギャップ", "branding_gaps"),
+                    ("営業・集客・ビジネス視点のギャップ", "business_gaps"),
+                    ("まず取り組むべきこと", "priority_actions"),
                 ]
                 for label_ja, key in sheet_labels:
                     val = sheet.get(key, "")

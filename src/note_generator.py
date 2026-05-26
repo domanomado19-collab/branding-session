@@ -7,77 +7,21 @@ FONT_PATH = Path(__file__).parent.parent / "assets" / "fonts" / "NotoSansJP.otf"
 WORKSHEET_DIR = Path(__file__).parent.parent / "assets" / "worksheets"
 
 # ワークシートごとの穴埋めエリア座標 (y_start, y_end)
-# PIL スキャンで検出した空白エリア（1055x1491 画像）
+# day1.png のみ対応（1055x1491 画像）
 FILL_COORDS: dict[str, list[tuple[int, int]]] = {
     "day1": [
-        (643, 691),   # 現在地
-        (731, 779),   # 目指したい方向
-        (819, 867),   # 今必要な言語化
-        (952, 1000),  # DAY2で深掘りするテーマ
-    ],
-    "day2_side_job": [
-        (808, 932),   # 受けやすい仕事 / 相性の良い相手
-        (1225, 1272), # 仮の立ち位置
-        (1321, 1409), # 残っている不安
-    ],
-    "day2_inhouse": [
-        (808, 922),   # 得意な役割 / 力を発揮しやすい現場
-        (1234, 1275), # 仮の立ち位置
-        (1325, 1407), # 残っている不安
-    ],
-    "day2_specialist": [
-        (794, 865),   # 肩書きの種 3案
-        (1252, 1295), # 一番捨てきれないテーマ
-        (1343, 1417), # 誰のための何屋か（仮の立ち位置）
-    ],
-    "day3_side_job": [
-        (1266, 1309), # 肩書き案
-        (1356, 1414), # SNSプロフィール文
-    ],
-    "day3_inhouse": [
-        (708, 749),   # 役割名・肩書き案
-        (1378, 1426), # SNSプロフィール文
-    ],
-    "day3_specialist": [
-        (699, 755),   # 肩書き案
-        (1377, 1429), # SNSプロフィール文
+        (643, 691),   # 現状のタイプ
+        (731, 779),   # 今の働き方
+        (819, 1000),  # 課題・モヤモヤ
     ],
 }
 
 # DAYごと・フィルエリアインデックスに対応する検索キー
 SECTION_KEYS: dict[str, list[list[str]]] = {
     "day1": [
-        ["現在地"],
-        ["目指したい方向"],
-        ["今必要な言語化"],
-        ["DAY2で深掘り"],
-    ],
-    "day2_side_job": [
-        ["選ばれたい相手", "受けやすい仕事", "提供できること"],
-        ["仮の立ち位置"],
-        ["残っている不安"],
-    ],
-    "day2_inhouse": [
-        ["得意な役割", "力を発揮", "提供できること"],
-        ["仮の立ち位置"],
-        ["残っている不安"],
-    ],
-    "day2_specialist": [
-        ["肩書きの種"],
-        ["一番捨てきれない"],
-        ["誰のための", "仮の立ち位置"],
-    ],
-    "day3_side_job": [
-        ["肩書き", "役割名"],
-        ["SNSプロフィール", "30秒自己紹介"],
-    ],
-    "day3_inhouse": [
-        ["役割名", "肩書き"],
-        ["SNSプロフィール", "30秒自己紹介"],
-    ],
-    "day3_specialist": [
-        ["肩書き"],
-        ["SNSプロフィール", "30秒自己紹介"],
+        ["現状のタイプ"],
+        ["今の働き方"],
+        ["課題・モヤモヤ"],
     ],
 }
 
@@ -85,7 +29,7 @@ SECTION_KEYS: dict[str, list[list[str]]] = {
 SUMMARY_MARKER = {
     1: "【DAY1まとめ】",
     2: "【DAY2まとめ】",
-    3: "【3DAYS",
+    3: "【DAY3まとめ】",
 }
 
 
@@ -204,9 +148,9 @@ def generate_note_image(day: int, route: str, summary: str, history: list = None
         "business_owner": "ディレクター型",
     }
     DAY_TITLE = {
-        1: "今のステージと、目指したい働き方を知る",
-        2: "ルート別に、選ばれる理由を掘る",
-        3: "肩書き・役割名・自己紹介に整える",
+        1: "今の働き方を整理する",
+        2: "理想の状態を言語化する",
+        3: "現実と理想のギャップを整理する",
     }
 
     W, H = 1200, 1697
@@ -230,9 +174,6 @@ def generate_note_image(day: int, route: str, summary: str, history: list = None
     draw.text((MARGIN, 70), f"DAY {day}", font=f_day, fill=WHITE)
     title = DAY_TITLE.get(day, "")
     draw.text((MARGIN, 155), title, font=f_sub, fill=GOLD)
-    if route and day > 1:
-        route_label = ROUTE_LABEL.get(route, route)
-        draw.text((W - MARGIN - 350, 75), route_label, font=f_label, fill=GOLD)
     draw.rectangle([0, header_h, W, header_h + 4], fill=GOLD)
 
     y = header_h + 30
@@ -249,8 +190,6 @@ def generate_note_image(day: int, route: str, summary: str, history: list = None
     draw.rectangle([0, H - 60, W, H], fill=NAVY)
     draw.text((MARGIN, H - 42), "BRANDING NOTE", font=f_small, fill=GOLD)
     day_str = f"DAY {day}"
-    if route and day > 1:
-        day_str += f"  |  {ROUTE_LABEL.get(route, '')}"
     bbox = f_small.getbbox(day_str)
     tw = bbox[2] - bbox[0]
     draw.text((W - MARGIN - tw, H - 42), day_str, font=f_small, fill=GOLD)
