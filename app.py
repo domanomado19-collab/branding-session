@@ -223,10 +223,8 @@ _init_session()
 WORKSHEETS_DIR = Path(__file__).parent / "assets" / "worksheets"
 
 def _get_worksheet_path(day: int, route: str) -> Path | None:
-    if day == 1:
-        p = WORKSHEETS_DIR / "day1.png"
-        return p if p.exists() else None
-    return None
+    p = WORKSHEETS_DIR / f"day{day}.png"
+    return p if p.exists() else None
 
 def _show_worksheet(day: int, route: str):
     path = _get_worksheet_path(day, route)
@@ -373,14 +371,18 @@ def _note_guide_section(route: str = ""):
 border-radius:0 12px 12px 0;margin:8px 0 16px 0;line-height:1.9;">
 <strong>ブランディングノートの使い方</strong><br>
 AIとの壁打ちのあとに、自分の言葉でノートにまとめてみると思考がさらに整理されます。<br>
-DAY1に対応したワークシートを印刷して、<em>手書きで書き込みながらセッションを進める</em>のがおすすめです。
+各DAYに対応したワークシートを印刷して、<em>手書きで書き込みながらセッションを進める</em>のがおすすめです。
 </div>
 """, unsafe_allow_html=True)
 
-    day1_path = WORKSHEETS_DIR / "day1.png"
-    col1, col_dummy = st.columns([1, 1])
-    with col1:
-        _ws_card("DAY 1 ワークシート", day1_path, "dl_day1_guide")
+    col1, col2, col3 = st.columns(3)
+    for col, day, label in zip(
+        [col1, col2, col3],
+        [1, 2, 3],
+        ["DAY 1 今の働き方を整理する", "DAY 2 理想の状態を言語化する", "DAY 3 ギャップを整理する"],
+    ):
+        with col:
+            _ws_card(label, WORKSHEETS_DIR / f"day{day}.png", f"dl_day{day}_guide")
 
 
 # ── 画面1：ウェルカム ─────────────────────────────────────────────────────────
@@ -455,7 +457,7 @@ def show_welcome():
 <div style="background:#f5f0ff;border-radius:12px;padding:12px 16px;margin:12px 0;font-size:13px;color:#5a20a0;line-height:1.8;">
 ✍ <strong>AIの壁打ち＋手書きノートの組み合わせがおすすめです。</strong><br>
 AIとの対話のあと、自分の言葉でノートに書き出してみると、思考がさらに整理されます。<br>
-DAY1に対応したワークシートを用意しています。下記からダウンロードして、印刷してご活用ください。
+各DAYに対応したワークシートを用意しています。下記からダウンロードして、印刷してご活用ください。
 </div>
 """, unsafe_allow_html=True)
 
@@ -620,7 +622,7 @@ def show_home():
     with st.expander("ワークシートをダウンロードする（手書き記入用）"):
         st.markdown("""
 AIとの壁打ちのあとに、自分の言葉でノートに書き出してみると思考がさらに整理されます。
-DAY1対応のワークシートを印刷して、手書きで記入しながらセッションを進めるのもおすすめです。
+各DAYに対応したワークシートを印刷して、手書きで記入しながらセッションを進めるのもおすすめです。
 """)
         _note_guide_section(route=mgr.route)
 
