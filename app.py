@@ -120,8 +120,9 @@ st.markdown(f"""
         background: #fff;
     }}
     .day-card-done {{
-        background: #f5fff5;
-        border-color: #7bc67e;
+        background: #fdf8f0;
+        border-color: #c9a96e;
+        border-width: 1.5px;
     }}
     .day-card-active {{
         background: #fdf8f0;
@@ -520,16 +521,23 @@ def show_home():
             f'style="width:100%;border-radius:12px;display:block;margin-bottom:16px;">',
             unsafe_allow_html=True,
         )
-    st.markdown(f"### マイページ")
-    st.markdown(f"全体進捗：**{overall_pct}%**　（DAY {completed} / {TOTAL_PARTS} 完了）")
-    st.progress(completed / TOTAL_PARTS)
-    st.markdown("---")
 
-    # 全体進捗
-    st.markdown("### 全体の進捗")
-    st.progress(completed / TOTAL_PARTS)
-    st.markdown(f"**{overall_pct}% 完了**　（DAY {completed} / {TOTAL_PARTS} 終了）")
-    st.markdown("")
+    # ── 進捗カード ──────────────────────────────────────────────────────
+    st.markdown(
+        f'<div style="background:#fff;border-radius:14px;padding:18px 22px;'
+        f'border:1px solid #e8e0d5;margin:0 0 16px 0;box-shadow:0 1px 4px rgba(0,0,0,0.05);">'
+        f'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">'
+        f'<span style="font-size:12px;font-weight:bold;color:#c9a96e;letter-spacing:0.12em;">PROGRESS</span>'
+        f'<span style="font-size:22px;font-weight:bold;color:#1a2d5a;">{overall_pct}<span style="font-size:13px;">%</span></span>'
+        f'</div>'
+        f'<div style="background:#f0ebe2;border-radius:6px;height:8px;overflow:hidden;">'
+        f'<div style="background:linear-gradient(90deg,#c9a96e,#e0c47a);border-radius:6px;'
+        f'height:8px;width:{overall_pct}%;transition:width .4s;"></div>'
+        f'</div>'
+        f'<div style="font-size:12px;color:#999;margin-top:8px;">DAY {completed} / {TOTAL_PARTS} 完了</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     # DAYカード一覧
     for i, part in enumerate(PARTS):
@@ -538,8 +546,10 @@ def show_home():
             with col_card:
                 st.markdown(
                     f'<div class="day-card day-card-done">'
-                    f'✅ <strong>DAY {part["id"]}　{part["name"]}</strong><br>'
-                    f'<span style="color:#666;font-size:13px;">{part["theme"]} — 完了</span>'
+                    f'<span style="color:#c9a96e;font-size:13px;font-weight:bold;'
+                    f'letter-spacing:0.05em;">✓ 完了</span>'
+                    f'&nbsp;&nbsp;<strong style="color:#1a2d5a;">DAY {part["id"]}　{part["name"]}</strong><br>'
+                    f'<span style="color:#999;font-size:12px;margin-left:36px;">{part["theme"]}</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -611,7 +621,14 @@ def show_home():
             _persist()
             st.rerun()
     else:
-        st.success("全DAY完了！あなたのブランディングノートを確認しましょう。")
+        st.markdown(
+            '<div style="background:#fdf8f0;border:1.5px solid #c9a96e;border-radius:12px;'
+            'padding:16px 20px;text-align:center;margin:8px 0;">'
+            '<div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:0.15em;margin-bottom:4px;">COMPLETE</div>'
+            '<div style="color:#1a2d5a;font-weight:bold;font-size:15px;">全DAY完了！あなたのブランディングノートを確認しましょう。</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
         if st.button("ブランディングノートを見る", type="primary", use_container_width=True):
             st.session_state.screen = "summary"
             _persist()
@@ -907,18 +924,35 @@ def show_summary():
     sheet = st.session_state.sheet
 
     st.markdown(
-        '<div class="celebrate-box">'
-        '<h2>3DAYS 完了！おめでとうございます！</h2>'
-        '<p style="font-size:18px;">素晴らしい！全てのセッションが終わりました。お疲れ様でした！</p>'
-        '<p style="font-size:28px; font-weight:bold; color:#fff;">100% 達成</p>'
+        '<div style="background:linear-gradient(135deg,#1a2d5a,#2d4a7a);border-radius:16px;'
+        'padding:28px;text-align:center;margin:16px 0;">'
+        '<div style="font-size:11px;font-weight:bold;letter-spacing:0.2em;color:#c9a96e;margin-bottom:12px;">3DAYS COMPLETE</div>'
+        '<h2 style="color:#fff;margin:0 0 10px 0;font-size:22px;">お疲れ様でした！</h2>'
+        '<p style="color:rgba(255,255,255,0.8);font-size:14px;margin:0;line-height:1.8;">'
+        '3DAYSを通じて、現状・理想・ギャップが言葉になりました。<br>まずは一歩、動き始めましょう。</p>'
         '</div>',
         unsafe_allow_html=True,
     )
 
-    st.markdown("## あなたのブランディングノート")
-    st.markdown("---")
+    st.markdown(
+        '<div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:0.15em;'
+        'margin:24px 0 16px 0;">YOUR BRANDING NOTE</div>'
+        '<div style="font-size:20px;font-weight:bold;color:#1a2d5a;margin-bottom:4px;">あなたのブランディングノート</div>',
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("### DAY1：現状")
+    def _day_header(num: str, title: str):
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:10px;margin:28px 0 10px 0;">'
+            f'<div style="background:#1a2d5a;color:#c9a96e;font-weight:bold;font-size:11px;'
+            f'padding:4px 12px;border-radius:20px;letter-spacing:0.08em;">DAY {num}</div>'
+            f'<span style="font-weight:bold;color:#1a2d5a;font-size:15px;">{title}</span>'
+            f'<div style="flex:1;height:1px;background:#e8e0d5;"></div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    _day_header("1", "今の働き方を整理する")
     day1_sections = [
         ("CURRENT TYPE", "現状のタイプ", sheet.get("current_type", "")),
         ("NOW", "今の働き方", sheet.get("current_situation", "")),
@@ -928,13 +962,13 @@ def show_summary():
         if content:
             st.markdown(
                 f'<div class="sheet-section">'
-                f'<div class="sheet-label">{label_en}</div>'
-                f'<strong>{label_ja}</strong><br><br>{content}'
+                f'<div class="sheet-label">{label_en} — {label_ja}</div>'
+                f'<div style="color:#2c2c2c;line-height:1.8;white-space:pre-line;">{content}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
 
-    st.markdown("### DAY2：理想")
+    _day_header("2", "理想の状態を言語化する")
     day2_sections = [
         ("IDEAL TYPE", "理想のタイプ", sheet.get("ideal_type", "")),
         ("TIMELINE", "実現したい時期", sheet.get("ideal_timeline", "")),
@@ -945,13 +979,13 @@ def show_summary():
         if content:
             st.markdown(
                 f'<div class="sheet-section">'
-                f'<div class="sheet-label">{label_en}</div>'
-                f'<strong>{label_ja}</strong><br><br>{content}'
+                f'<div class="sheet-label">{label_en} — {label_ja}</div>'
+                f'<div style="color:#2c2c2c;line-height:1.8;white-space:pre-line;">{content}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
 
-    st.markdown("### DAY3：ギャップ診断")
+    _day_header("3", "現実と理想のギャップを整理する")
     day3_sections = [
         ("DESIGN SKILL", "デザインスキルのギャップ", sheet.get("design_skill_gaps", "")),
         ("BRANDING", "ブランディングのギャップ", sheet.get("branding_gaps", "")),
@@ -962,8 +996,8 @@ def show_summary():
         if content:
             st.markdown(
                 f'<div class="sheet-section">'
-                f'<div class="sheet-label">{label_en}</div>'
-                f'<strong>{label_ja}</strong><br><br>{content}'
+                f'<div class="sheet-label">{label_en} — {label_ja}</div>'
+                f'<div style="color:#2c2c2c;line-height:1.8;white-space:pre-line;">{content}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
