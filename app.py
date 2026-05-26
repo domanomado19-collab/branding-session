@@ -365,6 +365,97 @@ def _ws_card(label: str, path: Path, dl_key: str):
         )
 
 
+def _takami_letter_html(sheet: dict, user_name: str) -> str:
+    """DAY3完了後のTAKAMIからのお手紙HTML。"""
+    name = f"{user_name}さん" if user_name else "あなた"
+    priority     = sheet.get("priority_actions", "").strip()
+    ideal_raw    = sheet.get("ideal_type", "").strip()
+    current_raw  = sheet.get("current_type", "").strip()
+    ideal_benefit = sheet.get("ideal_benefits", "").strip()
+    ideal_timeline = sheet.get("ideal_timeline", "").strip()
+
+    type_label = {
+        "side_job": "副業スタート型",
+        "inhouse": "業務委託型",
+        "specialist": "起業家型",
+        "business_owner": "ディレクター型",
+    }
+    ideal_label   = type_label.get(ideal_raw, ideal_raw) or ideal_raw
+    current_label = type_label.get(current_raw, current_raw) or current_raw
+
+    lines = [f"{name}へ", ""]
+    lines += ["3DAYS、本当にお疲れ様でした。",
+              "最後まで正直に向き合ってくれて、ありがとうございます。", ""]
+
+    if current_label and ideal_label:
+        t = f"今の{name}は{current_label}として動いていて、理想は{ideal_label}になること。"
+        if ideal_timeline:
+            t += f"（{ideal_timeline}で実現したいとのこと）"
+        lines.append(t)
+    if ideal_benefit:
+        lines.append(f"そうなれたら——{ideal_benefit}")
+    lines.append("")
+
+    lines += ["話してくれた課題やモヤモヤも、ちゃんと受け取りました。",
+              "それだけ本気で変わりたいと思っているってことですよね。", ""]
+
+    if priority:
+        lines += ["3DAYSを通じて見えてきた、まず取り組んでほしいこと——", "",
+                  priority, ""]
+
+    lines += [
+        "ここから先、自分で進めることはできます。", "",
+        "でも、もし",
+        "「何から始めたらいいかわからない」",
+        "「1人じゃどうしたらいいか不安」",
+        "「誰かに相談しながら一緒に進めたい」",
+        "そう感じているなら、ぜひ声をかけてください。", "",
+        "あなたのこれからを、応援しています。", "",
+        "                             吉田たかみ",
+    ]
+    body = "\n".join(lines)
+
+    return f"""
+<div style="background:#fffdf8;border:1.5px solid #e0cfa0;border-radius:20px;
+padding:32px 28px;margin:32px 0;box-shadow:0 2px 16px rgba(201,169,110,0.13);">
+
+  <div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:0.2em;
+  text-align:center;margin-bottom:24px;">✉&nbsp;&nbsp;TAKAMI YOSHIDA からのメッセージ</div>
+
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;
+  padding-bottom:20px;border-bottom:1px solid #e8d5b0;">
+    <img src="data:image/jpeg;base64,{AVATAR}"
+    style="width:56px;height:56px;border-radius:50%;object-fit:cover;
+    object-position:50% 20%;border:2px solid #c9a96e;flex-shrink:0;">
+    <div>
+      <div style="font-weight:bold;color:#1a2d5a;font-size:16px;">吉田たかみ</div>
+      <div style="font-size:12px;color:#999;margin-top:2px;">3DAYS MINE BRANDING</div>
+    </div>
+  </div>
+
+  <div style="line-height:2.1;color:#2c2c2c;font-size:15px;white-space:pre-line;">{body}</div>
+
+  <div style="border-top:1px dashed #e8d5b0;margin:28px 0 24px 0;"></div>
+
+  <div style="text-align:center;">
+    <div style="background:#fdf8f0;border:1.5px solid #c9a96e;border-radius:14px;
+    padding:16px 24px;margin:0 auto 20px auto;display:inline-block;min-width:260px;">
+      <div style="font-size:12px;color:#999;margin-bottom:8px;">LINEでの相談方法</div>
+      <div style="font-size:22px;font-weight:bold;color:#1a2d5a;letter-spacing:0.05em;">「マイブラ」と送ってください</div>
+      <div style="font-size:12px;color:#666;margin-top:6px;">↓ 下のボタンからLINEを開いて送信</div>
+    </div>
+    <br>
+    <a href="https://lin.ee/yZCe0OW" target="_blank" style="
+    display:inline-block;background:#06C755;color:#fff;font-weight:bold;
+    font-size:17px;padding:14px 44px;border-radius:50px;text-decoration:none;
+    box-shadow:0 4px 14px rgba(6,199,85,0.3);">
+      LINEで相談する
+    </a>
+  </div>
+</div>
+"""
+
+
 def _note_guide_section(route: str = ""):
     """ブランディングノート活用案内（ウェルカム・ホーム共通）。"""
     st.markdown("""
@@ -542,7 +633,7 @@ def show_home():
     # DAYカード一覧
     for i, part in enumerate(PARTS):
         if i < completed:
-            col_card, col_btn = st.columns([4, 1])
+            col_card, col_note, col_btn = st.columns([4, 1.3, 1])
             with col_card:
                 st.markdown(
                     f'<div class="day-card day-card-done">'
@@ -553,6 +644,13 @@ def show_home():
                     f'</div>',
                     unsafe_allow_html=True,
                 )
+            with col_note:
+                st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+                if st.button(f"ノートを見る", key=f"note_{i}", use_container_width=True):
+                    st.session_state.view_day = i + 1
+                    st.session_state.screen = "day_note"
+                    _persist()
+                    st.rerun()
             with col_btn:
                 st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
                 rem = mgr.remaining_restarts(i)
@@ -642,6 +740,62 @@ AIとの壁打ちのあとに、自分の言葉でノートに書き出してみ
 各DAYに対応したワークシートを印刷して、手書きで記入しながらセッションを進めるのもおすすめです。
 """)
         _note_guide_section(route=mgr.route)
+
+
+# ── 画面2-B：DAY別ブランディングノート ──────────────────────────────────────
+def show_day_note():
+    mgr: SessionManager = st.session_state.manager
+    day = st.session_state.get("view_day", 1)
+    _scroll_top()
+
+    day_names = {
+        1: "今の働き方を整理する",
+        2: "理想の状態を言語化する",
+        3: "現実と理想のギャップを整理する",
+    }
+    st.markdown(
+        f'<div style="background:#1a2d5a;border-radius:14px;padding:16px 20px;margin:0 0 20px 0;">'
+        f'<div style="font-size:11px;color:#c9a96e;font-weight:bold;letter-spacing:0.15em;margin-bottom:4px;">BRANDING NOTE</div>'
+        f'<div style="color:#fff;font-size:20px;font-weight:bold;">DAY {day} ブランディングノート</div>'
+        f'<div style="color:rgba(255,255,255,0.7);font-size:13px;margin-top:4px;">{day_names.get(day, "")}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    day_content = _extract_day_content(mgr.history, day, mgr.route)
+    day_content_clean = [(lbl, val) for lbl, val in day_content if val]
+
+    if day_content_clean:
+        for label, value in day_content_clean:
+            st.markdown(
+                f'<div class="sheet-section">'
+                f'<div class="sheet-label">{label}</div>'
+                f'<div style="color:#2c2c2c;line-height:1.8;white-space:pre-line;">{value}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        note_txt = _day_note_to_text(day, mgr.route, day_content_clean)
+        st.download_button(
+            label=f"DAY{day} ブランディングノートをダウンロード",
+            data=note_txt.encode("utf-8"),
+            file_name=f"branding_note_day{day}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+    else:
+        recap = _find_summary_message(mgr.history, day)
+        if recap:
+            st.markdown(recap)
+        else:
+            st.info("このDAYのブランディングノートはまだ作成されていません。")
+
+    _show_worksheet(day, mgr.route)
+
+    st.markdown("---")
+    if st.button("← マイページに戻る", use_container_width=True):
+        st.session_state.screen = "home"
+        _persist()
+        st.rerun()
 
 
 # ── 画面3：チャット ───────────────────────────────────────────────────────────
@@ -848,22 +1002,10 @@ def show_day_complete():
     # 空白ワークシート（手書き用）
     _show_worksheet(completed, mgr.route)
 
-    # DAY3完了時はLINEボタンを表示
+    # DAY3完了時はTAKAMIからのお手紙を表示
     if mgr.finished:
-        st.markdown(
-            '<div style="background:linear-gradient(135deg,#3d3a8c,#5a56b0);border-radius:16px;'
-            'padding:24px;text-align:center;margin:16px 0;">'
-            '<p style="color:#fff;font-size:16px;margin-bottom:8px;">'
-            '見えてきたギャップを、一緒に埋めていきませんか？</p>'
-            '<p style="color:rgba(255,255,255,0.8);font-size:14px;margin-bottom:16px;">'
-            'デザインスキル・ブランディング・集客など、個別相談でサポートします。</p>'
-            '<a href="https://lin.ee/yZCe0OW" target="_blank" style="'
-            'display:inline-block;background:#06C755;color:#fff;font-weight:bold;'
-            'font-size:18px;padding:14px 40px;border-radius:50px;text-decoration:none;">'
-            'LINEで個別相談に申し込む</a>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
+        sheet = st.session_state.get("sheet") or {}
+        st.markdown(_takami_letter_html(sheet, mgr.user_name), unsafe_allow_html=True)
 
     st.markdown("---")
     if not mgr.finished:
@@ -1003,22 +1145,10 @@ def show_summary():
                 unsafe_allow_html=True,
             )
 
-    # ── LINEコンバージョンボタン ─────────────────────────────────────────
-    st.markdown("---")
-    st.markdown(
-        '<div style="background:linear-gradient(135deg,#3d3a8c,#5a56b0);border-radius:16px;'
-        'padding:24px;text-align:center;margin:16px 0;">'
-        '<p style="color:#fff;font-size:16px;margin-bottom:8px;">'
-        '見えてきたギャップを、一緒に埋めていきませんか？</p>'
-        '<p style="color:rgba(255,255,255,0.8);font-size:14px;margin-bottom:16px;">'
-        'デザインスキル・ブランディング・集客など、個別相談でサポートします。</p>'
-        '<a href="https://lin.ee/yZCe0OW" target="_blank" style="'
-        'display:inline-block;background:#06C755;color:#fff;font-weight:bold;'
-        'font-size:18px;padding:14px 40px;border-radius:50px;text-decoration:none;">'
-        'LINEで個別相談に申し込む</a>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
+    # ── TAKAMIからのお手紙 ──────────────────────────────────────────────
+    mgr_for_letter: SessionManager | None = st.session_state.get("manager")
+    user_name_for_letter = mgr_for_letter.user_name if mgr_for_letter else ""
+    st.markdown(_takami_letter_html(sheet, user_name_for_letter), unsafe_allow_html=True)
 
     st.markdown("---")
     if st.button("マイページに戻る（振り返り・会話履歴）", use_container_width=True):
@@ -1375,6 +1505,8 @@ else:
         show_chat()
     elif screen == "day_complete":
         show_day_complete()
+    elif screen == "day_note":
+        show_day_note()
     elif screen == "summary":
         show_summary()
     elif screen == "legal":
