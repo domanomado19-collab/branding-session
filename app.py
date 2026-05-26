@@ -420,21 +420,21 @@ def show_welcome():
         st.markdown("---")
         st.markdown("""
 <div style="background:#fdf8f0;border-left:4px solid #c9a96e;padding:16px 20px;border-radius:0 12px 12px 0;margin:8px 0 20px 0;line-height:1.9;">
-「今のわたし」のままでいいのかわからないあなたへ。<br>
-人生・経験・偏愛を掘り起こし、次に進みたい方向性を言葉にする<br>
-<strong>3日間のAI壁打ち×ブランディングノート。</strong>
+「今の自分のままでいいのかな」「どこに向かえばいいのかわからない」——<br>
+そんなモヤモヤを持つあなたのための、<strong>3日間のAI壁打ち×ブランディングノート。</strong><br>
+現状・理想・ギャップを言語化することで、<em>まず何から始めればいいか</em>が見えてきます。
 </div>
 """, unsafe_allow_html=True)
 
     # ── セッションの進め方 ────────────────────────────────────────────
     st.markdown("### セッションの進め方")
     steps = [
-        ("DAY 1", "今のステージと目指したい働き方を知る",
-         "現在の働き方・収入・不安を整理し、あなたに合った4つのルートのどれかを一緒に見つけます。"),
-        ("DAY 2", "選ばれる理由を深掘りする",
-         "人生・偏愛・経験から「誰のための何屋か」の仮説を作ります。ルート別に質問が変わります。"),
-        ("DAY 3", "肩書き・自己紹介に整える",
-         "試しに名乗れる肩書きと、交流会やSNSで使える30秒自己紹介・プロフィール文を作ります。"),
+        ("DAY 1", "今の働き方を整理する",
+         "現在の働き方・課題・モヤモヤを吐き出します。今の自分がどのタイプかを一緒に確認します。"),
+        ("DAY 2", "理想の状態を言語化する",
+         "なりたい姿・いつ実現したいか・なぜそれを目指したいか・何が嬉しくなるかを言葉にします。"),
+        ("DAY 3", "現実と理想のギャップを整理する",
+         "デザインスキル・ブランディング・営業集客の3軸でギャップを診断。まず何から始めるかをレコメンドします。"),
     ]
     for i, (day, title, desc) in enumerate(steps):
         arrow = "" if i == len(steps) - 1 else ""
@@ -455,7 +455,7 @@ def show_welcome():
 <div style="background:#f5f0ff;border-radius:12px;padding:12px 16px;margin:12px 0;font-size:13px;color:#5a20a0;line-height:1.8;">
 ✍ <strong>AIの壁打ち＋手書きノートの組み合わせがおすすめです。</strong><br>
 AIとの対話のあと、自分の言葉でノートに書き出してみると、思考がさらに整理されます。<br>
-各DAYに対応したワークシートを用意しています。下記からダウンロードして、印刷してご活用ください。
+DAY1に対応したワークシートを用意しています。下記からダウンロードして、印刷してご活用ください。
 </div>
 """, unsafe_allow_html=True)
 
@@ -609,18 +609,18 @@ def show_home():
             _persist()
             st.rerun()
     else:
-        st.success("全DAY完了！ブランディングシートを確認しましょう。")
-        if st.button("ブランディングシートを見る", type="primary", use_container_width=True):
+        st.success("全DAY完了！あなたのブランディングノートを確認しましょう。")
+        if st.button("ブランディングノートを見る", type="primary", use_container_width=True):
             st.session_state.screen = "summary"
             _persist()
             st.rerun()
 
     # ── ブランディングノートダウンロード ──────────────────────────────
     st.markdown("---")
-    with st.expander("ブランディングノートをダウンロードする（手書き記入用）"):
+    with st.expander("ワークシートをダウンロードする（手書き記入用）"):
         st.markdown("""
 AIとの壁打ちのあとに、自分の言葉でノートに書き出してみると思考がさらに整理されます。
-印刷して手書きで記入しながらセッションを進めるのもおすすめです。
+DAY1対応のワークシートを印刷して、手書きで記入しながらセッションを進めるのもおすすめです。
 """)
         _note_guide_section(route=mgr.route)
 
@@ -654,15 +654,14 @@ def show_chat():
         st.markdown("---")
         st.markdown(f"**進捗** {mgr.overall_progress_pct}%")
         st.progress(mgr.overall_progress_pct / 100)
+        _type_name = {"side_job": "副業スタート型", "inhouse": "業務委託型",
+                      "specialist": "起業家型", "business_owner": "ディレクター型"}
         if mgr.route:
-            _route_emoji = {"side_job": "🌙", "inhouse": "🤝", "specialist": "⭐", "business_owner": "👑"}
-            _route_name  = {"side_job": "副業スタート型", "inhouse": "業務委託型",
-                            "specialist": "起業家型", "business_owner": "ディレクター型"}
             st.markdown(
                 f'<div style="background:#fdf8f0;border-radius:8px;padding:8px 12px;'
                 f'margin:8px 0;font-size:13px;">'
-                f'<span style="color:#c9a96e;font-size:10px;font-weight:bold;letter-spacing:.08em;">YOUR TYPE</span><br>'
-                f'{_route_emoji.get(mgr.route,"")}&nbsp;<strong>{_route_name.get(mgr.route, mgr.route)}</strong>'
+                f'<span style="color:#c9a96e;font-size:10px;font-weight:bold;letter-spacing:.08em;">現状タイプ</span><br>'
+                f'<strong>{_type_name.get(mgr.route, mgr.route)}</strong>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
