@@ -193,7 +193,7 @@ def _scroll_top():
 
 def _scroll_bottom():
     _components.html(
-        "<script>setTimeout(()=>{const m=window.parent.document.querySelector('section.main');if(m)m.scrollTo(0,m.scrollHeight);},150);</script>",
+        "<script>setTimeout(()=>{const m=window.parent.document.querySelector('section.main');if(m)m.scrollTo(0,m.scrollHeight);},400);</script>",
         height=0,
     )
 
@@ -921,6 +921,7 @@ def _sheet_to_text(sheet: dict) -> str:
 
 
 def show_summary():
+    _scroll_top()
     sheet = st.session_state.sheet
 
     st.markdown(
