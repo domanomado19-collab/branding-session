@@ -365,55 +365,105 @@ def _ws_card(label: str, path: Path, dl_key: str):
         )
 
 
+# ── シート表示用ヘルパー ──────────────────────────────────────────────────────
+_TYPE_LABEL = {
+    "side_job":       "副業スタート型",
+    "inhouse":        "業務委託型",
+    "specialist":     "起業家型",
+    "business_owner": "ディレクター型",
+}
+
+def _normalize_type(raw: str) -> str:
+    """英語コードを日本語ラベルに置換する（複数コードが混在していても対応）。"""
+    import re
+    text = raw or ""
+    for code, label in _TYPE_LABEL.items():
+        text = re.sub(code, label, text, flags=re.IGNORECASE)
+    text = re.sub(r'\*+', '', text)
+    return text.strip()
+
+def _primary_type_label(raw: str) -> str:
+    """テキストの中から最初に見つかったタイプの日本語ラベルのみを返す。"""
+    r = (raw or "").lower()
+    for code, label in _TYPE_LABEL.items():
+        if code in r:
+            return label
+    for label in _TYPE_LABEL.values():
+        if label in (raw or ""):
+            return label
+    return ""
+
+def _clean_md(raw: str) -> str:
+    """マークダウン記号・テーブル・区切り線を除去し <strong> タグのみ残す。"""
+    import re
+    text = raw or ""
+    text = re.sub(r'(?m)^-{2,}\s*$', '', text)
+    text = re.sub(r'(?m)^\|[-| :]+\|\s*$', '', text)
+    def _table_row(m):
+        cells = [c.strip() for c in m.group(0).split('|') if c.strip()]
+        return '　'.join(cells) if cells else ''
+    text = re.sub(r'\|[^\n]+\|', _table_row, text)
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'\*+', '', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def _takami_letter_html(sheet: dict, user_name: str) -> str:
     """DAY3完了後のTAKAMIからのお手紙HTML。"""
-    name = f"{user_name}さん" if user_name else "あなた"
-    priority     = sheet.get("priority_actions", "").strip()
-    ideal_raw    = sheet.get("ideal_type", "").strip()
-    current_raw  = sheet.get("current_type", "").strip()
-    ideal_benefit = sheet.get("ideal_benefits", "").strip()
-    ideal_timeline = sheet.get("ideal_timeline", "").strip()
+    name     = f"{user_name}さん" if user_name else "あなた"
+    c_label  = _primary_type_label(sheet.get("current_type", ""))
+    i_label  = _primary_type_label(sheet.get("ideal_type", ""))
+    priority = _clean_md(sheet.get("priority_actions", ""))
 
-    type_label = {
-        "side_job": "副業スタート型",
-        "inhouse": "業務委託型",
-        "specialist": "起業家型",
-        "business_owner": "ディレクター型",
-    }
-    ideal_label   = type_label.get(ideal_raw, ideal_raw) or ideal_raw
-    current_label = type_label.get(current_raw, current_raw) or current_raw
+    # 手紙本文（人間らしい文体で固定文＋データ差し込み）
+    paras = []
+    paras.append(f"{name}へ")
+    paras.append("")
+    paras.append("3DAYS、本当にお疲れ様でした。\n現状もモヤモヤも、理想も——全部正直に話してくれてありがとうございます。")
+    paras.append("")
 
-    lines = [f"{name}へ", ""]
-    lines += ["3DAYS、本当にお疲れ様でした。",
-              "最後まで正直に向き合ってくれて、ありがとうございます。", ""]
+    if c_label and i_label and c_label != i_label:
+        paras.append(
+            f"今の{name}は<strong>{c_label}</strong>として活動していて、\n"
+            f"目指しているのは<strong>{i_label}</strong>。\n"
+            f"その間にあるギャップが、今回はっきりと見えてきました。"
+        )
+    elif c_label:
+        paras.append(
+            f"今の{name}は<strong>{c_label}</strong>として活動している。\n"
+            f"その現在地から、どこへ向かうかがだいぶ言語化できてきましたね。"
+        )
+    paras.append("")
 
-    if current_label and ideal_label:
-        t = f"今の{name}は{current_label}として動いていて、理想は{ideal_label}になること。"
-        if ideal_timeline:
-            t += f"（{ideal_timeline}で実現したいとのこと）"
-        lines.append(t)
-    if ideal_benefit:
-        lines.append(f"そうなれたら——{ideal_benefit}")
-    lines.append("")
-
-    lines += ["話してくれた課題やモヤモヤも、ちゃんと受け取りました。",
-              "それだけ本気で変わりたいと思っているってことですよね。", ""]
+    paras.append(
+        "課題やモヤモヤを言葉にできたということ自体が、もう変化の始まりだと私は思っています。\n"
+        "ぼんやりしていたものに輪郭がついた——それだけで、次の一歩は格段に踏み出しやすくなるから。"
+    )
+    paras.append("")
 
     if priority:
-        lines += ["3DAYSを通じて見えてきた、まず取り組んでほしいこと——", "",
-                  priority, ""]
+        paras.append("3DAYSを経て、まずここから動いてほしいと思っています。")
+        paras.append(f'<div style="background:#fdf8f0;border-left:3px solid #c9a96e;padding:12px 16px;'
+                     f'margin:8px 0;border-radius:0 8px 8px 0;white-space:pre-line;">{priority}</div>')
 
-    lines += [
-        "ここから先、自分で進めることはできます。", "",
-        "でも、もし",
-        "「何から始めたらいいかわからない」",
-        "「1人じゃどうしたらいいか不安」",
-        "「誰かに相談しながら一緒に進めたい」",
-        "そう感じているなら、ぜひ声をかけてください。", "",
-        "あなたのこれからを、応援しています。", "",
-        "                             吉田たかみ",
-    ]
-    body = "\n".join(lines)
+    paras.append("")
+    paras.append(
+        "ここから先は、自分のペースで進んでいくことができます。\n\n"
+        "でも、もし\n"
+        "「どこから手をつけたらいいかわからない」\n"
+        "「1人じゃ続けられるか不安」\n"
+        "「誰かと一緒に考えながら進めたい」\n\n"
+        "そう感じているなら、ぜひ声をかけてください。\n"
+        "あなたの一歩を、一緒に作っていきましょう。"
+    )
+    paras.append("")
+    paras.append('<span style="font-size:14px;color:#999;">吉田たかみ</span>')
+
+    body_html = "".join(
+        p if p.startswith('<') else f'<p style="margin:0 0 4px 0;white-space:pre-line;">{p}</p>'
+        for p in paras
+    )
 
     return f"""
 <div style="background:#fffdf8;border:1.5px solid #e0cfa0;border-radius:20px;
@@ -433,7 +483,7 @@ padding:32px 28px;margin:32px 0;box-shadow:0 2px 16px rgba(201,169,110,0.13);">
     </div>
   </div>
 
-  <div style="line-height:2.1;color:#2c2c2c;font-size:15px;white-space:pre-line;">{body}</div>
+  <div style="line-height:2.1;color:#2c2c2c;font-size:15px;">{body_html}</div>
 
   <div style="border-top:1px dashed #e8d5b0;margin:28px 0 24px 0;"></div>
 
@@ -1034,8 +1084,13 @@ def show_day_complete():
 
 # ── 画面5：サマリー ───────────────────────────────────────────────────────────
 def _sheet_to_text(sheet: dict) -> str:
+    _type_keys = {"current_type", "ideal_type"}
     def section(label, key):
-        return [f"【{label}】", sheet.get(key, ""), ""]
+        raw = sheet.get(key, "")
+        val = _normalize_type(raw) if key in _type_keys else _clean_md(raw)
+        import re
+        val = re.sub(r'<[^>]+>', '', val)  # HTMLタグ除去（テキスト用）
+        return [f"【{label}】", val, ""]
 
     parts = [
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
@@ -1095,55 +1150,39 @@ def show_summary():
             unsafe_allow_html=True,
         )
 
+    _TYPE_KEYS = {"current_type", "ideal_type"}
+
+    def _sheet_item(label_en: str, label_ja: str, key: str):
+        raw = sheet.get(key, "")
+        if not raw:
+            return
+        display = _normalize_type(raw) if key in _TYPE_KEYS else _clean_md(raw)
+        if not display:
+            return
+        st.markdown(
+            f'<div class="sheet-section">'
+            f'<div class="sheet-label">{label_en} — {label_ja}</div>'
+            f'<div style="color:#2c2c2c;line-height:1.9;white-space:pre-line;">{display}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
     _day_header("1", "今の働き方を整理する")
-    day1_sections = [
-        ("CURRENT TYPE", "現状のタイプ", sheet.get("current_type", "")),
-        ("NOW", "今の働き方", sheet.get("current_situation", "")),
-        ("STRUGGLES", "課題・モヤモヤ", sheet.get("current_struggles", "")),
-    ]
-    for label_en, label_ja, content in day1_sections:
-        if content:
-            st.markdown(
-                f'<div class="sheet-section">'
-                f'<div class="sheet-label">{label_en} — {label_ja}</div>'
-                f'<div style="color:#2c2c2c;line-height:1.8;white-space:pre-line;">{content}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+    _sheet_item("CURRENT TYPE", "現状のタイプ",  "current_type")
+    _sheet_item("NOW",          "今の働き方",    "current_situation")
+    _sheet_item("STRUGGLES",    "課題・モヤモヤ", "current_struggles")
 
     _day_header("2", "理想の状態を言語化する")
-    day2_sections = [
-        ("IDEAL TYPE", "理想のタイプ", sheet.get("ideal_type", "")),
-        ("TIMELINE", "実現したい時期", sheet.get("ideal_timeline", "")),
-        ("WHY", "なぜなりたいか", sheet.get("ideal_reason", "")),
-        ("BENEFITS", "そうなれたら嬉しいこと", sheet.get("ideal_benefits", "")),
-    ]
-    for label_en, label_ja, content in day2_sections:
-        if content:
-            st.markdown(
-                f'<div class="sheet-section">'
-                f'<div class="sheet-label">{label_en} — {label_ja}</div>'
-                f'<div style="color:#2c2c2c;line-height:1.8;white-space:pre-line;">{content}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+    _sheet_item("IDEAL TYPE", "理想のタイプ",          "ideal_type")
+    _sheet_item("TIMELINE",   "実現したい時期",         "ideal_timeline")
+    _sheet_item("WHY",        "なぜなりたいか",          "ideal_reason")
+    _sheet_item("BENEFITS",   "そうなれたら嬉しいこと",  "ideal_benefits")
 
     _day_header("3", "現実と理想のギャップを整理する")
-    day3_sections = [
-        ("DESIGN SKILL", "デザインスキルのギャップ", sheet.get("design_skill_gaps", "")),
-        ("BRANDING", "ブランディングのギャップ", sheet.get("branding_gaps", "")),
-        ("BUSINESS", "営業・集客・ビジネス視点のギャップ", sheet.get("business_gaps", "")),
-        ("PRIORITY", "まず取り組むべきこと", sheet.get("priority_actions", "")),
-    ]
-    for label_en, label_ja, content in day3_sections:
-        if content:
-            st.markdown(
-                f'<div class="sheet-section">'
-                f'<div class="sheet-label">{label_en} — {label_ja}</div>'
-                f'<div style="color:#2c2c2c;line-height:1.8;white-space:pre-line;">{content}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+    _sheet_item("DESIGN SKILL", "デザインスキルのギャップ",        "design_skill_gaps")
+    _sheet_item("BRANDING",     "ブランディングのギャップ",         "branding_gaps")
+    _sheet_item("BUSINESS",     "営業・集客・ビジネス視点のギャップ", "business_gaps")
+    _sheet_item("PRIORITY",     "まず取り組むべきこと",             "priority_actions")
 
     # ── TAKAMIからのお手紙 ──────────────────────────────────────────────
     mgr_for_letter: SessionManager | None = st.session_state.get("manager")
