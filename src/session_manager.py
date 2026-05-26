@@ -137,13 +137,29 @@ class SessionManager:
         self.history.append({"role": "user", "content": user_message})
 
         system = build_part_system(self.part_index, self.user_name)
-        response = self.client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2048,
-            system=system,
-            messages=self._api_messages(),
-        )
-        reply = response.content[0].text
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=2048,
+                system=system,
+                messages=self._api_messages(),
+            )
+            reply = response.content[0].text
+        except anthropic.RateLimitError:
+            self.history.pop()
+            raise RuntimeError("rate_limit")
+        except anthropic.AuthenticationError:
+            self.history.pop()
+            raise RuntimeError("auth_error")
+        except anthropic.APIStatusError as e:
+            self.history.pop()
+            if e.status_code == 529:
+                raise RuntimeError("overloaded")
+            raise RuntimeError(f"api_error:{e.status_code}")
+        except Exception as e:
+            self.history.pop()
+            raise RuntimeError(f"unknown:{e}")
+
         self.history.append({"role": "assistant", "content": reply})
 
         day_done = self._detect_day_end(reply)
@@ -264,9 +280,12 @@ class SessionManager:
                 for m in day_msgs
             )
         )
-        res = self.client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=512,
-            messages=[{"role": "user", "content": extract_prompt}],
-        )
-        return res.content[0].text
+        try:
+            res = self.client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=512,
+                messages=[{"role": "user", "content": extract_prompt}],
+            )
+            return res.content[0].text
+        except Exception:
+            return f"（DAY{part['id']}のまとめ生成中にエラーが発生しました。会話内容は保存されています。）"

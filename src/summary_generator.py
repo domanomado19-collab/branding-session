@@ -58,13 +58,15 @@ side_job / inhouse / specialist / business_owner のどれかを記載。
 次に個別相談で深めるべきテーマを1〜2文で。
 """
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2048,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    raw = response.content[0].text
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text
+    except Exception as e:
+        raw = f"（ブランディングシートの生成中にエラーが発生しました: {e}）"
     return _parse_sheet(raw)
 
 

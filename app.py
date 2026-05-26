@@ -738,14 +738,32 @@ def show_chat():
                     st.session_state.scroll_chat_bottom = True  # DAY完了→ボタンが見える位置へ
                 _persist()
                 st.rerun()
-            except Exception as e:
+            except RuntimeError as e:
                 st.session_state.messages.pop()  # 追加したuserメッセージを戻す
-                api_msgs = mgr._api_messages()
+                err = str(e)
+                if err == "rate_limit":
+                    st.warning(
+                        "リクエストが集中しています。少し時間をおいてから再度送信してください。\n\n"
+                        "（しばらく待ってもエラーが続く場合はLINEよりご連絡ください）"
+                    )
+                elif err == "auth_error":
+                    st.error(
+                        "APIキーの認証に失敗しました。\n\n"
+                        "管理者にご連絡ください。"
+                    )
+                elif err == "overloaded":
+                    st.warning(
+                        "AIサーバーが混雑しています。1〜2分後にもう一度お試しください。"
+                    )
+                else:
+                    st.error(
+                        "送信中にエラーが発生しました。しばらく待ってから再度お試しください。\n\n"
+                        "問題が続く場合はLINEよりご連絡ください。"
+                    )
+            except Exception as e:
+                st.session_state.messages.pop()
                 st.error(
-                    f"**送信エラー** `{type(e).__name__}`\n\n"
-                    f"- 送信メッセージ数: {len(api_msgs)}\n"
-                    f"- 先頭ロール: `{api_msgs[0]['role'] if api_msgs else 'empty'}`\n"
-                    f"- エラー詳細: `{str(e)[:300]}`"
+                    "予期しないエラーが発生しました。ページを再読み込みしてお試しください。"
                 )
 
 
