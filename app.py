@@ -688,31 +688,51 @@ def show_home():
     )
 
     # DAYカード一覧
+    _DAY_ICONS   = ["🌱", "⭐", "🎯"]
+    _DAY_SUBTITLES = [
+        "現在地を知る",
+        "理想を描く",
+        "次の一歩を決める",
+    ]
+
     for i, part in enumerate(PARTS):
+        icon = _DAY_ICONS[i]
+        subtitle = _DAY_SUBTITLES[i]
+
         if i < completed:
-            col_card, col_note, col_btn = st.columns([4, 1.3, 1])
-            with col_card:
-                st.markdown(
-                    f'<div class="day-card day-card-done">'
-                    f'<span style="color:#c9a96e;font-size:13px;font-weight:bold;'
-                    f'letter-spacing:0.05em;">✓ 完了</span>'
-                    f'&nbsp;&nbsp;<strong style="color:#1a2d5a;">DAY {part["id"]}　{part["name"]}</strong><br>'
-                    f'<span style="color:#999;font-size:12px;margin-left:36px;">{part["theme"]}</span>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            with col_note:
-                st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-                if st.button(f"ノートを見る", key=f"note_{i}", use_container_width=True):
+            # ── 完了カード ──────────────────────────────────────────────
+            st.markdown(
+                f'<div style="background:#fdf8f0;border:1.5px solid #c9a96e;border-radius:14px;'
+                f'padding:16px 18px;margin:10px 0 4px 0;'
+                f'display:flex;align-items:flex-start;gap:14px;">'
+                f'<div style="width:44px;height:44px;border-radius:50%;background:#1a2d5a;'
+                f'color:#c9a96e;font-size:20px;font-weight:bold;flex-shrink:0;margin-top:1px;'
+                f'display:flex;align-items:center;justify-content:center;">✓</div>'
+                f'<div style="flex:1;min-width:0;">'
+                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                f'<span style="font-size:10px;font-weight:bold;letter-spacing:0.12em;'
+                f'color:#fff;background:#1a2d5a;padding:2px 10px;border-radius:20px;">DAY {part["id"]}</span>'
+                f'<span style="font-size:13px;">{icon}</span>'
+                f'<span style="font-size:11px;color:#c9a96e;font-weight:bold;">{subtitle}</span>'
+                f'<span style="font-size:11px;color:#aaa;margin-left:auto;">完了</span>'
+                f'</div>'
+                f'<div style="font-size:15px;font-weight:bold;color:#1a2d5a;line-height:1.4;">{part["name"]}</div>'
+                f'<div style="font-size:12px;color:#999;margin-top:3px;">{part["theme"]}</div>'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+            # ボタン行
+            bcol1, bcol2, bcol3 = st.columns([2, 2, 3])
+            with bcol1:
+                if st.button("📋 ノートを見る", key=f"note_{i}", use_container_width=True):
                     st.session_state.view_day = i + 1
                     st.session_state.screen = "day_note"
                     _persist()
                     st.rerun()
-            with col_btn:
-                st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+            with bcol2:
                 rem = mgr.remaining_restarts(i)
                 if rem > 0:
-                    if st.button(f"やり直す（残{rem}回）", key=f"restart_{i}", use_container_width=True):
+                    if st.button(f"↩ やり直す（残{rem}回）", key=f"restart_{i}", use_container_width=True):
                         opening = mgr.restart_day(i)
                         st.session_state.messages = [{"role": "assistant", "content": opening}]
                         st.session_state.screen = "chat"
@@ -720,7 +740,7 @@ def show_home():
                         _persist()
                         st.rerun()
                 else:
-                    st.button("やり直し済", key=f"restart_{i}", use_container_width=True, disabled=True)
+                    st.button("↩ やり直し済", key=f"restart_{i}", use_container_width=True, disabled=True)
 
             # 会話履歴の展開パネル
             day_start = mgr.day_start_indices[i] if i < len(mgr.day_start_indices) else 0
@@ -743,20 +763,50 @@ def show_home():
                                 f'<div class="user-row"><div class="user-bubble">{msg["content"]}</div></div>',
                                 unsafe_allow_html=True,
                             )
+
         elif i == mgr.part_index and not mgr.finished:
+            # ── 進行中カード ────────────────────────────────────────────
             st.markdown(
-                f'<div class="day-card day-card-active">'
-                f'▶ <strong>DAY {part["id"]}　{part["name"]}</strong>　<span style="color:#c9a96e;">進行中</span><br>'
-                f'<span style="color:#666;font-size:13px;">{part["theme"]}</span>'
-                f'</div>',
+                f'<div style="background:#fff;border:2px solid #c9a96e;border-radius:14px;'
+                f'padding:16px 18px;margin:10px 0;'
+                f'display:flex;align-items:flex-start;gap:14px;'
+                f'box-shadow:0 3px 14px rgba(201,169,110,0.22);">'
+                f'<div style="width:44px;height:44px;border-radius:50%;background:#c9a96e;'
+                f'color:#1a2d5a;font-size:16px;font-weight:bold;flex-shrink:0;margin-top:1px;'
+                f'display:flex;align-items:center;justify-content:center;">▶</div>'
+                f'<div style="flex:1;min-width:0;">'
+                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                f'<span style="font-size:10px;font-weight:bold;letter-spacing:0.12em;'
+                f'color:#fff;background:#1a2d5a;padding:2px 10px;border-radius:20px;">DAY {part["id"]}</span>'
+                f'<span style="font-size:13px;">{icon}</span>'
+                f'<span style="font-size:11px;color:#c9a96e;font-weight:bold;">{subtitle}</span>'
+                f'<span style="font-size:11px;color:#c9a96e;font-weight:bold;margin-left:auto;">進行中</span>'
+                f'</div>'
+                f'<div style="font-size:15px;font-weight:bold;color:#1a2d5a;line-height:1.4;">{part["name"]}</div>'
+                f'<div style="font-size:12px;color:#666;margin-top:3px;">{part["theme"]}</div>'
+                f'</div></div>',
                 unsafe_allow_html=True,
             )
+
         else:
+            # ── 未開始カード ────────────────────────────────────────────
             st.markdown(
-                f'<div class="day-card day-card-future">'
-                f'○ DAY {part["id"]}　{part["name"]}<br>'
-                f'<span style="font-size:13px;">{part["theme"]}</span>'
-                f'</div>',
+                f'<div style="background:#f5f3f0;border:1px solid #e0dbd4;border-radius:14px;'
+                f'padding:16px 18px;margin:10px 0;'
+                f'display:flex;align-items:flex-start;gap:14px;">'
+                f'<div style="width:44px;height:44px;border-radius:50%;background:#e8e2da;'
+                f'color:#bbb;font-size:15px;font-weight:bold;flex-shrink:0;margin-top:1px;'
+                f'display:flex;align-items:center;justify-content:center;">{part["id"]}</div>'
+                f'<div style="flex:1;min-width:0;">'
+                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                f'<span style="font-size:10px;font-weight:bold;letter-spacing:0.12em;'
+                f'color:#bbb;background:#e8e2da;padding:2px 10px;border-radius:20px;">DAY {part["id"]}</span>'
+                f'<span style="font-size:13px;opacity:0.4;">{icon}</span>'
+                f'<span style="font-size:11px;color:#bbb;">{subtitle}</span>'
+                f'</div>'
+                f'<div style="font-size:15px;font-weight:bold;color:#c0b8b0;line-height:1.4;">{part["name"]}</div>'
+                f'<div style="font-size:12px;color:#ccc;margin-top:3px;">{part["theme"]}</div>'
+                f'</div></div>',
                 unsafe_allow_html=True,
             )
 
