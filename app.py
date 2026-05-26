@@ -393,6 +393,13 @@ def _primary_type_label(raw: str) -> str:
             return label
     return ""
 
+def _extract_priority(text: str) -> str:
+    """テキストから優先度（高/中/低）を抽出する。"""
+    import re
+    m = re.search(r'優先度[：:]\s*([高中低])', text)
+    return m.group(1) if m else ""
+
+
 def _clean_md(raw: str) -> str:
     """マークダウン記号・テーブル・区切り線を除去し <strong> タグのみ残す。"""
     import re
@@ -1179,10 +1186,53 @@ def show_summary():
     _sheet_item("BENEFITS",   "そうなれたら嬉しいこと",  "ideal_benefits")
 
     _day_header("3", "現実と理想のギャップを整理する")
-    _sheet_item("DESIGN SKILL", "デザインスキルのギャップ",        "design_skill_gaps")
-    _sheet_item("BRANDING",     "ブランディングのギャップ",         "branding_gaps")
-    _sheet_item("BUSINESS",     "営業・集客・ビジネス視点のギャップ", "business_gaps")
-    _sheet_item("PRIORITY",     "まず取り組むべきこと",             "priority_actions")
+
+    _PRIO_STYLE = {
+        "高": ("🔴", "#fff0ee", "#d94f38"),
+        "中": ("🟡", "#fdf8f0", "#c9a96e"),
+        "低": ("🟢", "#f0f5f0", "#5a9e6e"),
+    }
+
+    def _gap_card(label_en: str, label_ja: str, key: str):
+        raw = sheet.get(key, "")
+        if not raw:
+            return
+        content = _clean_md(raw)
+        prio = _extract_priority(content)
+        icon, bg, border = _PRIO_STYLE.get(prio, ("", "#fff", "#e8e0d5"))
+        badge = (
+            f'<div style="background:{border};color:#fff;font-size:11px;font-weight:bold;'
+            f'padding:4px 12px;border-radius:20px;white-space:nowrap;">{icon} 優先度 {prio}</div>'
+        ) if prio else ""
+        st.markdown(
+            f'<div style="background:{bg};border:1.5px solid {border};border-radius:12px;'
+            f'padding:18px 20px;margin:8px 0;">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+            f'<div>'
+            f'<div style="font-size:10px;font-weight:bold;color:#c9a96e;letter-spacing:0.12em;">{label_en}</div>'
+            f'<div style="font-size:14px;font-weight:bold;color:#1a2d5a;">{label_ja}</div>'
+            f'</div>'
+            f'{badge}'
+            f'</div>'
+            f'<div style="color:#444;line-height:1.9;font-size:14px;white-space:pre-line;">{content}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    _gap_card("DESIGN SKILL", "デザインスキルのギャップ",         "design_skill_gaps")
+    _gap_card("BRANDING",     "ブランディングのギャップ",          "branding_gaps")
+    _gap_card("BUSINESS",     "営業・集客・ビジネス視点のギャップ", "business_gaps")
+
+    priority_raw = sheet.get("priority_actions", "")
+    if priority_raw:
+        st.markdown(
+            f'<div style="background:#1a2d5a;border-radius:14px;padding:24px 22px;margin:20px 0 8px 0;">'
+            f'<div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:0.18em;margin-bottom:10px;">✦ NEXT STEP</div>'
+            f'<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;">まず取り組むべきこと</div>'
+            f'<div style="color:#fff;line-height:2;font-size:15px;white-space:pre-line;">{_clean_md(priority_raw)}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     # ── TAKAMIからのお手紙 ──────────────────────────────────────────────
     mgr_for_letter: SessionManager | None = st.session_state.get("manager")
