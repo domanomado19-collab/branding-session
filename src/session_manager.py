@@ -19,16 +19,30 @@ _DAY_END_SOFT = [
 ]
 
 
-def build_part_system(part_index: int, user_name: str = "") -> str:
+def build_part_system(part_index: int, user_name: str = "", is_designer: bool = True) -> str:
     part = PARTS[part_index]
     name_line = (
         f"\n\n【ユーザーのお名前】\n"
         f"必ず「{user_name}さん」と名前で呼んでください。絶対に省略しないこと。"
         if user_name else ""
     )
+    if is_designer:
+        profession_line = (
+            "\n\n【ユーザーの職種】\n"
+            "このユーザーはデザイナーです。デザイン業務・デザインスキル・デザイナーとしての働き方を前提に質問・伴走してください。"
+        )
+    else:
+        profession_line = (
+            "\n\n【ユーザーの職種】\n"
+            "このユーザーはデザイナーではありません。"
+            "「デザイン」「デザイナー」という職種を前提にせず、"
+            "「スキル・専門性・強み・仕事」という言葉に置き換えて質問・伴走してください。"
+            "デザインスキルのギャップについては「専門スキルのギャップ」として扱ってください。"
+        )
     return (
         TAKAMI_SYSTEM_PROMPT
         + name_line
+        + profession_line
         + f"\n\n【現在のDAY】\n"
         + f"DAY {part['id']} / {TOTAL_PARTS}：{part['name']}\n"
         + f"テーマ：{part['theme']}\n"
@@ -53,6 +67,7 @@ class SessionManager:
         self.day_start_indices: list[int] = [0]
         self.restart_counts: dict[int, int] = {}  # {day_index: 使用済み回数}
         self.user_name: str = ""
+        self.is_designer: bool = True
 
     @property
     def current_part(self) -> dict:
@@ -70,8 +85,9 @@ class SessionManager:
     def overall_progress_pct(self) -> int:
         return int(self.completed_days / TOTAL_PARTS * 100)
 
-    def start(self, user_name: str = "") -> str:
+    def start(self, user_name: str = "", is_designer: bool = True) -> str:
         self.user_name = user_name
+        self.is_designer = is_designer
         opening = get_opening_message(0)
         if user_name:
             opening = opening.replace("はじめまして！", f"はじめまして、{user_name}さん！", 1)
@@ -136,7 +152,7 @@ class SessionManager:
         self.day_just_completed = False
         self.history.append({"role": "user", "content": user_message})
 
-        system = build_part_system(self.part_index, self.user_name)
+        system = build_part_system(self.part_index, self.user_name, self.is_designer)
         try:
             response = self.client.messages.create(
                 model="claude-sonnet-4-6",
@@ -249,6 +265,7 @@ class SessionManager:
             "day_start_indices": self.day_start_indices,
             "restart_counts": self.restart_counts,
             "user_name": self.user_name,
+            "is_designer": self.is_designer,
         }
 
     @classmethod
@@ -265,6 +282,7 @@ class SessionManager:
         raw = data.get("restart_counts", {})
         mgr.restart_counts = {int(k): v for k, v in raw.items()}
         mgr.user_name = data.get("user_name", "")
+        mgr.is_designer = data.get("is_designer", True)
         return mgr
 
     def _extract_part_summary(self) -> str:

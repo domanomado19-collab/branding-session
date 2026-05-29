@@ -555,13 +555,16 @@ def _takami_letter_html(sheet: dict, user_name: str) -> str:
 
     paras.append("")
     paras.append(
-        "ここから先は、自分のペースで進んでいくことができます。\n\n"
-        "でも、もし\n"
-        "「どこから手をつけたらいいかわからない」\n"
-        "「1人じゃ続けられるか不安」\n"
-        "「誰かと一緒に考えながら進めたい」\n\n"
-        "そう感じているなら、ぜひ声をかけてください。\n"
-        "あなたの一歩を、一緒に作っていきましょう。"
+        "ここまで一緒に壁打ちしてきたけど、最後に決断するのはAIじゃなくて、あなた自身。\n"
+        "どんなに分析しても、最終的に「動く・動かない」を選ぶのは、あなたにしかできないことだと思っています。"
+    )
+    paras.append("")
+    paras.append(
+        "だからこそ、迷ったときは一人で抱えないでほしい。\n"
+        "「どこから動けばいいかわからない」「本当にこれで合ってるのかな」\n"
+        "——そういうときのために、LINEで個別相談を受け付けています。\n\n"
+        "このセッションを体験してくれた方だけに、個別でお時間を作っています。\n"
+        "ぜひ活用してください。"
     )
     paras.append("")
     paras.append('<span style="font-size:14px;color:#999;">吉田たかみ</span>')
@@ -811,18 +814,27 @@ AIとの対話のあと、自分の言葉でノートに書き出してみると
             unsafe_allow_html=True,
         )
 
-    # ── 名前入力＋スタートボタン ──────────────────────────────────────
+    # ── 名前入力＋職種選択＋スタートボタン ───────────────────────────
     user_name = st.text_input(
         "まず、お名前（呼び名）を教えてください",
         placeholder="例：たかみ、山田さん など",
         max_chars=20,
     )
+    profession = st.radio(
+        "あなたはデザイナーですか？",
+        ["はい、デザイナーです", "いいえ、デザイナーではありません"],
+        index=0,
+        horizontal=True,
+        help="回答によってセッション中の言葉遣いを調整します",
+    )
+    is_designer = (profession == "はい、デザイナーです")
+
     if st.button("DAY 1 をスタートする", type="primary", use_container_width=True):
         if not user_name.strip():
             st.warning("お名前を入力してからスタートしてください。")
         else:
             mgr = SessionManager()
-            opening = mgr.start(user_name.strip())
+            opening = mgr.start(user_name.strip(), is_designer=is_designer)
             st.session_state.manager = mgr
             st.session_state.messages = [{"role": "assistant", "content": opening}]
             st.session_state.screen = "chat"
