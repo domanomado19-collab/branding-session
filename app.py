@@ -205,6 +205,14 @@ def _init_session():
     st.session_state.created_at = datetime.now().isoformat()
 
 
+def _session_password() -> str:
+    """共通パスワード（SESSION_PASSWORD）を返す。未設定なら空文字。"""
+    try:
+        return st.secrets.get("SESSION_PASSWORD", os.environ.get("SESSION_PASSWORD", ""))
+    except Exception:
+        return os.environ.get("SESSION_PASSWORD", "")
+
+
 def _token_check_required() -> bool:
     """REQUIRE_ACCESS_TOKEN=true のときだけコード認証を有効にする。"""
     try:
@@ -212,6 +220,54 @@ def _token_check_required() -> bool:
     except Exception:
         v = os.environ.get("REQUIRE_ACCESS_TOKEN", "false")
     return str(v).lower() == "true"
+
+
+def show_password_gate():
+    """共通パスワード認証画面。正しいパスワードが入力されたら password_ok=True を立てる。"""
+    if HERO_IMG:
+        st.markdown(
+            f'<img src="data:{HERO_MIME};base64,{HERO_IMG}" '
+            f'style="width:100%;border-radius:12px;display:block;margin-bottom:24px;">',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<img src="data:image/jpeg;base64,{AVATAR}" '
+            f'style="width:90px;height:90px;border-radius:50%;object-fit:cover;'
+            f'object-position:50% 20%;border:3px solid #c9a96e;display:block;margin:0 auto 20px auto;">',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<div style="text-align:center;font-size:22px;font-weight:bold;color:#1a2d5a;'
+        'letter-spacing:0.04em;margin-bottom:6px;">3days MINE BRANDING</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div style="text-align:center;font-size:13px;color:#888;margin-bottom:28px;">'
+        'by 吉田たかみ</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div style="background:#fff;border:1.5px solid #e8d5b0;border-radius:16px;'
+        'padding:28px 24px 24px 24px;max-width:420px;margin:0 auto;">',
+        unsafe_allow_html=True,
+    )
+    pw_input = st.text_input("アクセスコードを入力してください", type="password", key="pw_input")
+    if st.button("入室する", use_container_width=True):
+        if pw_input == _session_password():
+            st.session_state.password_ok = True
+            st.rerun()
+        else:
+            st.error("コードが正しくありません。もう一度お試しください。")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        '<div style="text-align:center;font-size:12px;color:#bbb;margin-top:20px;">'
+        'アクセスコードをお持ちでない方は吉田たかみへご連絡ください。</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def _remaining_days() -> int:
@@ -1803,6 +1859,12 @@ AI回答生成等のため外部サービスを利用する場合があります
 if st.query_params.get("page") == "admin":
     show_admin()
 else:
+    # ── パスワードゲート ──────────────────────────────────────────────────
+    _pw = _session_password()
+    if _pw and not st.session_state.get("password_ok"):
+        show_password_gate()
+        st.stop()
+
     _init_session()
 
     # 利用期限チェック（welcomeと法律ページは除く）
