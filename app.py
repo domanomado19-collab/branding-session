@@ -193,6 +193,7 @@ def _init_session():
             st.session_state.manager = SessionManager.from_dict(mgr_data) if mgr_data else None
             saved_screen = saved["screen"]
             st.session_state.screen = "home" if saved_screen in ("chat", "day_complete") else saved_screen
+            st.session_state.is_fresh_session = False
             return
 
     new_sid = uuid.uuid4().hex[:12]
@@ -203,6 +204,37 @@ def _init_session():
     st.session_state.messages = []
     st.session_state.sheet = None
     st.session_state.created_at = datetime.now().isoformat()
+    # URL に ?s= がなかった場合のみ True（ベースURL直アクセス）
+    st.session_state.is_fresh_session = (sid is None)
+
+
+def _session_persistence_js():
+    """localStorageにセッションIDを保存し、ベースURL直アクセス時は過去セッションへリダイレクトする。"""
+    import json as _json
+    sid = st.session_state.get("session_id", "")
+    if not sid:
+        return
+    is_fresh = st.session_state.get("is_fresh_session", False)
+    sid_j = _json.dumps(sid)
+    fresh_j = "true" if is_fresh else "false"
+    _components.html(f"""
+<script>
+(function(){{
+  var KEY = 'branding_sid';
+  var sid = {sid_j};
+  var isFresh = {fresh_j};
+  try {{
+    var saved = localStorage.getItem(KEY);
+    if (isFresh && saved && saved !== sid) {{
+      // ベースURL直アクセスで過去セッションが見つかった → 復元
+      window.parent.location.href = window.parent.location.pathname + '?s=' + encodeURIComponent(saved);
+      return;
+    }}
+    localStorage.setItem(KEY, sid);
+  }} catch(e) {{}}
+}})();
+</script>
+""", height=0)
 
 
 def _session_password() -> str:
@@ -319,6 +351,7 @@ def _current_url() -> str:
 
 
 _init_session()
+_session_persistence_js()
 
 WORKSHEETS_DIR = Path(__file__).parent / "assets" / "worksheets"
 
