@@ -418,7 +418,7 @@ def _extract_day_content(history: list, day: int, route: str) -> list[tuple[str,
         return []
 
     if day == 1:
-        labels = ["現状のタイプ", "今の働き方", "課題・モヤモヤ"]
+        labels = ["現状のタイプ", "今の働き方", "今の私につながっている人生の事件簿", "これは自分得意かもと感じた瞬間", "課題・モヤモヤ"]
     elif day == 2:
         labels = ["理想のタイプ", "実現したい時期", "なぜなりたいか", "そうなれたら嬉しいこと"]
     elif day == 3:
@@ -1107,7 +1107,7 @@ def show_chat():
     # ── スクロール制御 ────────────────────────────────────────────────
     if st.session_state.pop("scroll_chat_top", False):
         _scroll_top()
-    elif st.session_state.pop("scroll_chat_bottom", False):
+    elif st.session_state.pop("scroll_chat_bottom", False) or mgr.day_just_completed:
         _scroll_bottom()
 
     # サイドバー
@@ -1233,6 +1233,7 @@ def show_chat():
 # ── 画面4：DAY完了 ────────────────────────────────────────────────────────────
 def show_day_complete():
     mgr: SessionManager = st.session_state.manager
+    _scroll_top()
     completed = mgr.completed_days
     overall_pct = mgr.overall_progress_pct
     next_day_num = mgr.part_index + 1
