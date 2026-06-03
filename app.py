@@ -1272,10 +1272,18 @@ def show_day_complete():
     next_day_num = mgr.part_index + 1
 
     st.markdown(
-        f'<div class="celebrate-box">'
-        f'<h2>DAY {completed} 完了！</h2>'
-        f'<p style="font-size:18px;">お疲れ様でした！今日はここまでです。</p>'
-        f'<p style="font-size:28px; font-weight:bold; color:#2e7d32;">{overall_pct}% 達成</p>'
+        f'<div style="background:#fdf8f0;border:1.5px solid #c9a96e;border-radius:16px;'
+        f'padding:28px 24px;text-align:center;margin:0 0 16px 0;">'
+        f'<div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:0.2em;'
+        f'margin-bottom:10px;">DAY {completed} COMPLETE</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:#1a2d5a;margin-bottom:8px;">'
+        f'お疲れ様でした</div>'
+        f'<div style="font-size:14px;color:#888;margin-bottom:16px;">'
+        f'今日はここまで。ゆっくり休んでください。</div>'
+        f'<div style="display:inline-flex;align-items:baseline;gap:4px;">'
+        f'<span style="font-size:36px;font-weight:bold;color:#1a2d5a;">{overall_pct}</span>'
+        f'<span style="font-size:13px;color:#aaa;">% 完了</span>'
+        f'</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1362,6 +1370,7 @@ def show_day_complete():
     with col2:
         if st.button("マイページに戻る", use_container_width=True):
             st.session_state.screen = "home"
+            st.session_state.messages = []  # 完了したDAYのメッセージはクリア（次DAY開始用）
             _persist()
             st.rerun()
 
@@ -1436,7 +1445,7 @@ def show_summary():
 
     _TYPE_KEYS = {"current_type", "ideal_type"}
 
-    def _sheet_item(label_en: str, label_ja: str, key: str):
+    def _sheet_item(label_ja: str, key: str):
         raw = sheet.get(key, "")
         if not raw:
             return
@@ -1445,22 +1454,47 @@ def show_summary():
             return
         st.markdown(
             f'<div class="sheet-section">'
-            f'<div class="sheet-label">{label_en} — {label_ja}</div>'
+            f'<div class="sheet-label">{label_ja}</div>'
             f'<div style="color:#2c2c2c;line-height:1.9;white-space:pre-line;">{display}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
+    # ── 現状→理想 タイプスナップショット ────────────────────────────────
+    c_type = _primary_type_label(sheet.get("current_type", ""))
+    i_type = _primary_type_label(sheet.get("ideal_type", ""))
+    if c_type or i_type:
+        st.markdown(
+            f'<div style="display:flex;align-items:center;justify-content:center;gap:16px;'
+            f'background:#fff;border-radius:12px;padding:14px 20px;margin:0 0 8px 0;'
+            f'border:1px solid #e8e0d5;">'
+            f'<div style="text-align:center;">'
+            f'<div style="font-size:10px;color:#999;letter-spacing:.1em;margin-bottom:4px;">NOW</div>'
+            f'<div style="font-size:13px;font-weight:bold;color:#555;background:#f0ebe2;'
+            f'padding:5px 14px;border-radius:20px;">{c_type or "—"}</div>'
+            f'</div>'
+            f'<div style="font-size:22px;color:#c9a96e;padding:0 4px;">→</div>'
+            f'<div style="text-align:center;">'
+            f'<div style="font-size:10px;color:#1a2d5a;letter-spacing:.1em;margin-bottom:4px;">GOAL</div>'
+            f'<div style="font-size:13px;font-weight:bold;color:#fff;background:#1a2d5a;'
+            f'padding:5px 14px;border-radius:20px;">{i_type or "—"}</div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
     _day_header("1", "今の働き方を整理する")
-    _sheet_item("CURRENT TYPE", "現状のタイプ",  "current_type")
-    _sheet_item("NOW",          "今の働き方",    "current_situation")
-    _sheet_item("STRUGGLES",    "課題・モヤモヤ", "current_struggles")
+    _sheet_item("現状のタイプ", "current_type")
+    with st.expander("今の働き方・課題の詳細を見る"):
+        _sheet_item("今の働き方", "current_situation")
+        _sheet_item("課題・モヤモヤ", "current_struggles")
 
     _day_header("2", "理想の状態を言語化する")
-    _sheet_item("IDEAL TYPE", "理想のタイプ",          "ideal_type")
-    _sheet_item("TIMELINE",   "実現したい時期",         "ideal_timeline")
-    _sheet_item("WHY",        "なぜなりたいか",          "ideal_reason")
-    _sheet_item("BENEFITS",   "そうなれたら嬉しいこと",  "ideal_benefits")
+    _sheet_item("理想のタイプ", "ideal_type")
+    _sheet_item("実現したい時期", "ideal_timeline")
+    with st.expander("なぜなりたいか・嬉しいことの詳細を見る"):
+        _sheet_item("なぜなりたいか", "ideal_reason")
+        _sheet_item("そうなれたら嬉しいこと", "ideal_benefits")
 
     _day_header("3", "現実と理想のギャップを整理する")
 
@@ -1470,7 +1504,7 @@ def show_summary():
         "低": ("🟢", "#f0f5f0", "#5a9e6e"),
     }
 
-    def _gap_card(label_en: str, label_ja: str, key: str):
+    def _gap_card(label_ja: str, key: str):
         raw = sheet.get(key, "")
         if not raw:
             return
@@ -1485,10 +1519,7 @@ def show_summary():
             f'<div style="background:{bg};border:1.5px solid {border};border-radius:12px;'
             f'padding:18px 20px;margin:8px 0;">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-            f'<div>'
-            f'<div style="font-size:10px;font-weight:bold;color:#c9a96e;letter-spacing:0.12em;">{label_en}</div>'
             f'<div style="font-size:14px;font-weight:bold;color:#1a2d5a;">{label_ja}</div>'
-            f'</div>'
             f'{badge}'
             f'</div>'
             f'<div style="color:#444;line-height:1.9;font-size:14px;white-space:pre-line;">{content}</div>'
@@ -1496,16 +1527,15 @@ def show_summary():
             unsafe_allow_html=True,
         )
 
-    _gap_card("DESIGN SKILL", "デザインスキルのギャップ",         "design_skill_gaps")
-    _gap_card("BRANDING",     "ブランディングのギャップ",          "branding_gaps")
-    _gap_card("BUSINESS",     "営業・集客・ビジネス視点のギャップ", "business_gaps")
+    _gap_card("デザインスキルのギャップ", "design_skill_gaps")
+    _gap_card("ブランディングのギャップ", "branding_gaps")
+    _gap_card("営業・集客・ビジネス視点のギャップ", "business_gaps")
 
     priority_raw = sheet.get("priority_actions", "")
     if priority_raw:
         st.markdown(
             f'<div style="background:#1a2d5a;border-radius:14px;padding:24px 22px;margin:20px 0 8px 0;">'
-            f'<div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:0.18em;margin-bottom:10px;">✦ NEXT STEP</div>'
-            f'<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;">まず取り組むべきこと</div>'
+            f'<div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:0.18em;margin-bottom:14px;">✦ NEXT STEP　まず取り組むべきこと</div>'
             f'<div style="color:#fff;line-height:2;font-size:15px;white-space:pre-line;">{_clean_md(priority_raw)}</div>'
             f'</div>',
             unsafe_allow_html=True,
