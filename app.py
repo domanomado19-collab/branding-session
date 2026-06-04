@@ -174,6 +174,38 @@ st.markdown(f"""
         border-color: #1a2d5a !important;
         box-shadow: 0 0 0 2px rgba(26,45,90,0.15) !important;
     }}
+
+    /* ── モバイル最適化 ── */
+    @media (max-width: 640px) {{
+        .takami-bubble {{
+            font-size: 13px;
+            padding: 10px 13px;
+            line-height: 1.75;
+        }}
+        .user-bubble {{
+            font-size: 13px;
+            padding: 10px 13px;
+            line-height: 1.75;
+            max-width: 88%;
+        }}
+        .takami-avatar {{
+            width: 34px;
+            height: 34px;
+        }}
+        .takami-row {{
+            gap: 8px;
+            margin: 2px 0 12px 0;
+        }}
+        .user-row {{
+            margin: 2px 0 12px 0;
+        }}
+        .takami-name {{
+            font-size: 10px;
+        }}
+        .sheet-section {{
+            padding: 10px 14px;
+        }}
+    }}
 </style>
 """, unsafe_allow_html=True)
 
