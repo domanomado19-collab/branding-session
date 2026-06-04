@@ -2003,9 +2003,10 @@ else:
     # ── パスワードゲート ──────────────────────────────────────────────────
     _pw = _session_password()
     if _pw and not st.session_state.get("password_ok"):
-        # URLに有効なセッションIDがあれば認証済みとみなしてスキップ
+        # セッションが実際に開始済み（manager あり）の場合のみパスワードをスキップ
         _url_sid = st.query_params.get("s")
-        if _url_sid and load_session(_url_sid):
+        _saved = load_session(_url_sid) if _url_sid else None
+        if _saved and _saved.get("manager"):
             st.session_state.password_ok = True
         else:
             show_password_gate()
