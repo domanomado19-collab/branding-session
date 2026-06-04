@@ -187,7 +187,8 @@ def save(session_id: str, screen: str, messages: list,
                 data["created_at"] = existing.data[0]["created_at"]
             else:
                 data["created_at"] = now
-            sb.table("sessions").upsert(data).execute()
+            # on_conflict="session_id" で確実に UPDATE（指定なしだと毎回INSERTになる）
+            sb.table("sessions").upsert(data, on_conflict="session_id").execute()
             return
         except Exception:
             pass  # フォールバックへ
@@ -202,7 +203,14 @@ def load(session_id: str) -> dict | None:
     sb = _get_supabase()
     if sb:
         try:
-            result = sb.table("sessions").select("*").eq("session_id", session_id).execute()
+            result = (
+                sb.table("sessions")
+                .select("*")
+                .eq("session_id", session_id)
+                .order("updated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
             if result.data:
                 return result.data[0]
         except Exception:
