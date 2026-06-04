@@ -144,12 +144,6 @@ st.markdown(f"""
     /* ── Streamlitデフォルトブランディングを非表示 ── */
     #MainMenu {{ display: none !important; }}
     footer {{ display: none !important; }}
-    footer[data-testid="stStatusWidget"] {{ display: none !important; }}
-    [data-testid="stToolbar"] {{ display: none !important; }}
-    [data-testid="stDecoration"] {{ display: none !important; }}
-    .stDeployButton {{ display: none !important; }}
-    .viewerBadge_container__r5tak {{ display: none !important; }}
-    #stDecoration {{ display: none !important; }}
 
     /* ── サイドバー ── */
     [data-testid="stSidebar"] {{ background-color: #f5f0e8; }}
@@ -410,35 +404,6 @@ def _current_url() -> str:
 
 _init_session()
 _session_persistence_js()
-
-# Streamlitデフォルトバナーを動的に非表示
-_components.html("""
-<script>
-(function(){
-  var SELECTORS = [
-    'footer','#MainMenu',
-    '[data-testid="stToolbar"]','[data-testid="stDecoration"]',
-    '.stDeployButton',
-    '.viewerBadge_container__r5tak','#stDecoration',
-    'a[href*="streamlit.io"]'
-  ];
-  function hide(){
-    SELECTORS.forEach(function(s){
-      window.parent.document.querySelectorAll(s).forEach(function(el){
-        el.style.setProperty('display','none','important');
-      });
-    });
-  }
-  hide();
-  setTimeout(hide, 500);
-  setTimeout(hide, 1500);
-  new MutationObserver(hide).observe(
-    window.parent.document.body,
-    {childList:true, subtree:true}
-  );
-})();
-</script>
-""", height=0)
 
 WORKSHEETS_DIR = Path(__file__).parent / "assets" / "worksheets"
 
