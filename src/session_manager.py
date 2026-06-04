@@ -67,6 +67,7 @@ class SessionManager:
         self.day_start_indices: list[int] = [0]
         self.restart_counts: dict[int, int] = {}  # {day_index: 使用済み回数}
         self.user_name: str = ""
+        self.real_name: str = ""
         self.is_designer: bool = True
 
     @property
@@ -85,8 +86,9 @@ class SessionManager:
     def overall_progress_pct(self) -> int:
         return int(self.completed_days / TOTAL_PARTS * 100)
 
-    def start(self, user_name: str = "", is_designer: bool = True) -> str:
+    def start(self, user_name: str = "", real_name: str = "", is_designer: bool = True) -> str:
         self.user_name = user_name
+        self.real_name = real_name
         self.is_designer = is_designer
         opening = get_opening_message(0)
         if user_name:
@@ -265,6 +267,7 @@ class SessionManager:
             "day_start_indices": self.day_start_indices,
             "restart_counts": self.restart_counts,
             "user_name": self.user_name,
+            "real_name": self.real_name,
             "is_designer": self.is_designer,
         }
 
@@ -282,6 +285,7 @@ class SessionManager:
         raw = data.get("restart_counts", {})
         mgr.restart_counts = {int(k): v for k, v in raw.items()}
         mgr.user_name = data.get("user_name", "")
+        mgr.real_name = data.get("real_name", "")
         mgr.is_designer = data.get("is_designer", True)
         return mgr
 

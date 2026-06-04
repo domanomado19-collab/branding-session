@@ -936,9 +936,14 @@ AIとの対話のあと、自分の言葉でノートに書き出してみると
         )
 
     # ── 名前入力＋職種選択＋スタートボタン ───────────────────────────
+    real_name = st.text_input(
+        "お申し込み時のお名前（本名）を教えてください",
+        placeholder="例：吉田 花子",
+        max_chars=30,
+    )
     user_name = st.text_input(
-        "まず、お名前（呼び名）を教えてください",
-        placeholder="例：たかみ、山田さん など",
+        "AIに呼んでほしいニックネームを教えてください",
+        placeholder="例：はなちゃん、よしださん など",
         max_chars=20,
     )
     profession = st.radio(
@@ -951,11 +956,13 @@ AIとの対話のあと、自分の言葉でノートに書き出してみると
     is_designer = (profession == "はい、デザイナーです")
 
     if st.button("DAY 1 をスタートする", type="primary", use_container_width=True):
-        if not user_name.strip():
-            st.warning("お名前を入力してからスタートしてください。")
+        if not real_name.strip():
+            st.warning("お申し込み時のお名前を入力してからスタートしてください。")
+        elif not user_name.strip():
+            st.warning("ニックネームを入力してからスタートしてください。")
         else:
             mgr = SessionManager()
-            opening = mgr.start(user_name.strip(), is_designer=is_designer)
+            opening = mgr.start(user_name.strip(), real_name=real_name.strip(), is_designer=is_designer)
             st.session_state.manager = mgr
             st.session_state.messages = [{"role": "assistant", "content": opening}]
             st.session_state.screen = "chat"
@@ -1819,8 +1826,14 @@ def show_admin():
 
         label = "✅ 全完了" if finished else f"▶ {day_names[n_done]}"
         route_str = ROUTE_LABEL.get(route, "（未判定）") if route else "（未判定）"
+        real_name = mgr.get("real_name", "")
+        user_name_disp = mgr.get("user_name", "")
+        name_display = (
+            f"{real_name}（{user_name_disp}）" if real_name and user_name_disp
+            else real_name or user_name_disp or "名前未登録"
+        )
 
-        with st.expander(f"**{sid[:8]}…** — {label}　{route_str}　最終アクセス: {updated}"):
+        with st.expander(f"**{name_display}** — {label}　{route_str}　最終アクセス: {updated}"):
             col_a, col_b, col_c = st.columns(3)
             col_a.markdown(f"**進捗** {progress_pct[n_done]}%")
             col_b.markdown(f"**ルート** {route_str}")
