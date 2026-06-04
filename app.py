@@ -1783,8 +1783,20 @@ def show_admin():
         n_done = completed_days(s)
         route = mgr.get("route", "")
         finished = mgr.get("finished", False)
-        updated = s.get("updated_at", "")[:16].replace("T", " ")
-        created = s.get("created_at", "")[:16].replace("T", " ")
+        def _to_jst(ts: str) -> str:
+            if not ts:
+                return ""
+            try:
+                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                jst = dt.utctimetuple()
+                # UTC+9 に変換
+                from datetime import timezone, timedelta as _td
+                jst_dt = dt.astimezone(timezone(_td(hours=9)))
+                return jst_dt.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                return ts[:16].replace("T", " ")
+        updated = _to_jst(s.get("updated_at", ""))
+        created = _to_jst(s.get("created_at", ""))
         summaries: list[str] = mgr.get("part_summaries") or []
         sheet: dict = s.get("sheet") or {}
 
