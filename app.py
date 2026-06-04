@@ -300,6 +300,13 @@ def show_password_gate():
         'アクセスコードをお持ちでない方は吉田たかみへご連絡ください。</div>',
         unsafe_allow_html=True,
     )
+    st.markdown(
+        '<div style="text-align:center;margin-top:16px;">'
+        '<a href="?page=legal" target="_blank" style="font-size:12px;color:#c9a96e;text-decoration:none;">'
+        '利用規約・プライバシーポリシー・特定商取引法を確認する</a>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def _remaining_days() -> int:
@@ -1934,6 +1941,9 @@ AI回答生成等のため外部サービスを利用する場合があります
 # ── ルーティング ──────────────────────────────────────────────────────────────
 if st.query_params.get("page") == "admin":
     show_admin()
+elif st.query_params.get("page") == "legal":
+    # 利用規約はパスワードなしで閲覧可能
+    show_legal()
 else:
     # ── パスワードゲート ──────────────────────────────────────────────────
     _pw = _session_password()
