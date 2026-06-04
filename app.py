@@ -142,11 +142,16 @@ st.markdown(f"""
     }}
 
     /* ── Streamlitデフォルトブランディングを非表示 ── */
-    #MainMenu {{ display: none; }}
-    footer {{ display: none; }}
-    header {{ display: none; }}
-    [data-testid="stToolbar"] {{ display: none; }}
-    .stDeployButton {{ display: none; }}
+    #MainMenu {{ display: none !important; }}
+    footer {{ display: none !important; }}
+    footer[data-testid="stStatusWidget"] {{ display: none !important; }}
+    header {{ display: none !important; }}
+    [data-testid="stToolbar"] {{ display: none !important; }}
+    [data-testid="stDecoration"] {{ display: none !important; }}
+    [data-testid="stBottom"] {{ display: none !important; }}
+    .stDeployButton {{ display: none !important; }}
+    .viewerBadge_container__r5tak {{ display: none !important; }}
+    #stDecoration {{ display: none !important; }}
 
     /* ── サイドバー ── */
     [data-testid="stSidebar"] {{ background-color: #f5f0e8; }}
