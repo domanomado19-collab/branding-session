@@ -403,7 +403,6 @@ def _current_url() -> str:
 
 
 _init_session()
-_session_persistence_js()
 
 WORKSHEETS_DIR = Path(__file__).parent / "assets" / "worksheets"
 
@@ -2013,6 +2012,7 @@ else:
             st.stop()
 
     _init_session()
+    _session_persistence_js()  # パスワード認証後にのみ実行（パスワードゲートに白いボックスが出ないよう）
 
     # 利用期限チェック（welcomeと法律ページは除く）
     screen = st.session_state.screen
