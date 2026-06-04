@@ -1130,6 +1130,7 @@ def show_home():
     if not mgr.finished:
         next_day_num = mgr.part_index + 1
         if st.button(f"DAY {next_day_num} を続ける", type="primary", use_container_width=True):
+            mgr.day_just_completed = False  # 入力欄が消えるのを防ぐ
             if st.session_state.messages:
                 # 途中から再開→続きから表示（スクロールフラグなし）
                 st.session_state.screen = "chat"
@@ -1711,56 +1712,6 @@ def show_admin():
     if st.button("ログアウト", use_container_width=False):
         st.session_state.admin_authed = False
         st.rerun()
-
-    # ── アクセスコード管理 ────────────────────────────────────────────
-    st.markdown("### 🔑 アクセスコード管理")
-    token_enabled = _token_check_required()
-    if token_enabled:
-        st.success("認証ゲート：有効（REQUIRE_ACCESS_TOKEN=true）")
-    else:
-        st.warning("認証ゲート：無効　— Secrets に `REQUIRE_ACCESS_TOKEN = \"true\"` を追加すると有効になります")
-
-    with st.expander("新しいコードを発行する", expanded=True):
-        gc1, gc2, gc3 = st.columns([1, 2, 1])
-        with gc1:
-            gen_count = st.number_input("発行枚数", min_value=1, max_value=50, value=1)
-        with gc2:
-            gen_note = st.text_input("メモ（購入者名・メールなど）", placeholder="例：山田花子")
-        with gc3:
-            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            if st.button("発行する", type="primary", use_container_width=True):
-                new_codes = create_tokens(int(gen_count), gen_note)
-                st.success(f"{len(new_codes)}件のコードを発行しました")
-                for c in new_codes:
-                    st.code(c)
-
-    tokens = list_tokens()
-    if tokens:
-        st.markdown(f"**発行済みコード一覧**　（{len(tokens)} 件）")
-        unused = [t for t in tokens if not t.get("used_at")]
-        used   = [t for t in tokens if t.get("used_at")]
-        st.caption(f"未使用: {len(unused)}件　／　使用済み: {len(used)}件")
-
-        tab_unused, tab_used = st.tabs(["未使用", "使用済み"])
-        with tab_unused:
-            for t in unused:
-                c1, c2, c3 = st.columns([3, 3, 1])
-                c1.code(t["token"])
-                c2.caption(t.get("note", ""))
-                with c3:
-                    if st.button("削除", key=f"del_{t['token']}", use_container_width=True):
-                        delete_token(t["token"])
-                        st.rerun()
-        with tab_used:
-            for t in used:
-                c1, c2, c3 = st.columns([3, 3, 2])
-                c1.code(t["token"])
-                c2.caption(t.get("note", ""))
-                c3.caption(f"使用: {t.get('used_at','')[:10]}")
-    else:
-        st.info("発行済みコードはありません。")
-
-    st.markdown("---")
 
     # ── Supabase 接続確認 ─────────────────────────────────────────────
     from src.session_store import _get_supabase
