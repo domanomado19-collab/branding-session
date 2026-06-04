@@ -1716,6 +1716,8 @@ def show_admin():
             st.error(f"❌ 書き込みエラー：{e}")
 
     sessions = load_all_sessions()
+    # DAY1をスタートしていない空セッション（navigateのたびに生成される）を除外
+    sessions = [s for s in sessions if s.get("manager")]
     if not sessions:
         st.info("セッションデータがまだありません。")
         return
