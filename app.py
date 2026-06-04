@@ -760,24 +760,6 @@ def show_welcome():
 </div>
 """, unsafe_allow_html=True)
 
-    # ── お気に入り登録アナウンス ──────────────────────────────────────
-    st.markdown("""
-<div style="background:linear-gradient(135deg,#1a2d5a,#243870);border-radius:12px;
-padding:16px 18px;margin:12px 0 20px 0;">
-  <div style="font-size:10px;font-weight:bold;color:#c9a96e;letter-spacing:.12em;margin-bottom:5px;">
-    ⚠ はじめにお読みください
-  </div>
-  <div style="color:#fff;font-size:15px;font-weight:bold;margin-bottom:8px;">
-    名前を入力して「DAY1をスタート」したら、すぐにお気に入り登録してください
-  </div>
-  <div style="color:rgba(255,255,255,0.85);font-size:12px;line-height:1.9;">
-    登録しないと、次回は最初からになる場合があります。<br>
-    📱 スマホ：「共有」ボタン →「ブックマーク」<br>
-    💻 PC：Cmd+D（Mac）/ Ctrl+D（Win）
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
     # ── セッションの進め方 ────────────────────────────────────────────
     st.markdown("### セッションの進め方")
     steps = [
@@ -1254,6 +1236,22 @@ def show_chat():
         _show_worksheet(current_day, mgr.route)
 
     st.markdown("---")
+
+    # DAY1開始直後のみ、チャット冒頭にブックマーク案内を表示
+    if current_day == 1 and len(st.session_state.messages) == 1 and not mgr.day_just_completed:
+        st.markdown("""
+<div style="background:#fdf8f0;border:1.5px solid #c9a96e;border-radius:10px;
+padding:12px 16px;margin:0 0 12px 0;">
+  <div style="font-size:12px;font-weight:bold;color:#1a2d5a;margin-bottom:4px;">
+    📌 このページを今すぐお気に入り登録してください
+  </div>
+  <div style="font-size:11px;color:#666;line-height:1.8;">
+    登録しないと次回は最初からになります。<br>
+    📱 スマホ：「共有」ボタン →「ブックマーク」<br>
+    💻 PC：Cmd+D（Mac）/ Ctrl+D（Win）
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
     for msg in st.session_state.messages:
         if msg["role"] == "assistant":
