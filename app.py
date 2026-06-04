@@ -141,6 +141,13 @@ st.markdown(f"""
         color: #aaa;
     }}
 
+    /* ── Streamlitデフォルトブランディングを非表示 ── */
+    #MainMenu {{ display: none; }}
+    footer {{ display: none; }}
+    header {{ display: none; }}
+    [data-testid="stToolbar"] {{ display: none; }}
+    .stDeployButton {{ display: none; }}
+
     /* ── サイドバー ── */
     [data-testid="stSidebar"] {{ background-color: #f5f0e8; }}
 
