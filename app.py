@@ -1758,6 +1758,22 @@ def show_admin():
 
     st.markdown("---")
 
+    # ── クレジット使用状況 ────────────────────────────────────────────
+    st.markdown("### 💰 クレジット使用状況（累計）")
+    total_in  = sum((s.get("manager") or {}).get("total_input_tokens",  0) for s in sessions)
+    total_out = sum((s.get("manager") or {}).get("total_output_tokens", 0) for s in sessions)
+    # Claude Sonnet 4.6 料金: input $3/1M・output $15/1M
+    cost_usd = (total_in * 3 + total_out * 15) / 1_000_000
+    cost_jpy = int(cost_usd * 155)  # 概算レート
+    cr1, cr2, cr3, cr4 = st.columns(4)
+    cr1.metric("入力トークン", f"{total_in:,}")
+    cr2.metric("出力トークン", f"{total_out:,}")
+    cr3.metric("推定コスト（USD）", f"${cost_usd:.3f}")
+    cr4.metric("推定コスト（円）", f"¥{cost_jpy:,}")
+    st.caption("※ Claude Sonnet 4.6 の公開料金に基づく概算。残額確認は [Anthropic Console](https://console.anthropic.com) で。")
+
+    st.markdown("---")
+
     # ── フィルター ────────────────────────────────────────────────────
     st.markdown("### ユーザー一覧")
     filter_opt = st.radio(
@@ -1770,9 +1786,36 @@ def show_admin():
 
     shown = [s for s in sessions if filter_val is None or completed_days(s) == filter_val]
 
+    # ── 検索・ソート ──────────────────────────────────────────────────
+    sc1, sc2 = st.columns([2, 1])
+    with sc1:
+        search_q = st.text_input("🔍 名前で検索", placeholder="本名またはニックネーム")
+    with sc2:
+        sort_opt = st.selectbox("並び順", [
+            "最終アクセス（新しい順）", "最終アクセス（古い順）",
+            "進捗（高い順）", "名前（あいうえお順）",
+        ])
+
+    if search_q:
+        q = search_q.lower()
+        shown = [s for s in shown if
+                 q in (s.get("manager") or {}).get("real_name", "").lower() or
+                 q in (s.get("manager") or {}).get("user_name", "").lower()]
+
+    if sort_opt == "最終アクセス（新しい順）":
+        shown.sort(key=lambda s: s.get("updated_at", ""), reverse=True)
+    elif sort_opt == "最終アクセス（古い順）":
+        shown.sort(key=lambda s: s.get("updated_at", ""))
+    elif sort_opt == "進捗（高い順）":
+        shown.sort(key=lambda s: completed_days(s), reverse=True)
+    elif sort_opt == "名前（あいうえお順）":
+        shown.sort(key=lambda s: (s.get("manager") or {}).get("real_name", ""))
+
     if not shown:
         st.info("該当するセッションがありません。")
         return
+
+    st.caption(f"{len(shown)} 件表示中")
 
     # ── ユーザーカード ─────────────────────────────────────────────────
     day_names = ["（開始のみ）", "DAY1完了", "DAY2完了", "DAY3全完了"]

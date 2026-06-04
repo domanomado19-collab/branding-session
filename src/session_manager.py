@@ -69,6 +69,8 @@ class SessionManager:
         self.user_name: str = ""
         self.real_name: str = ""
         self.is_designer: bool = True
+        self.total_input_tokens: int = 0
+        self.total_output_tokens: int = 0
 
     @property
     def current_part(self) -> dict:
@@ -163,6 +165,8 @@ class SessionManager:
                 messages=self._api_messages(),
             )
             reply = response.content[0].text
+            self.total_input_tokens += response.usage.input_tokens
+            self.total_output_tokens += response.usage.output_tokens
         except anthropic.RateLimitError:
             self.history.pop()
             raise RuntimeError("rate_limit")
@@ -269,6 +273,8 @@ class SessionManager:
             "user_name": self.user_name,
             "real_name": self.real_name,
             "is_designer": self.is_designer,
+            "total_input_tokens": self.total_input_tokens,
+            "total_output_tokens": self.total_output_tokens,
         }
 
     @classmethod
@@ -287,6 +293,8 @@ class SessionManager:
         mgr.user_name = data.get("user_name", "")
         mgr.real_name = data.get("real_name", "")
         mgr.is_designer = data.get("is_designer", True)
+        mgr.total_input_tokens = data.get("total_input_tokens", 0)
+        mgr.total_output_tokens = data.get("total_output_tokens", 0)
         return mgr
 
     def _extract_part_summary(self) -> str:
