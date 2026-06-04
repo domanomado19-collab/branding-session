@@ -1237,23 +1237,7 @@ def show_chat():
 
     st.markdown("---")
 
-    # DAY1開始直後のみ、チャット冒頭にブックマーク案内を表示
-    if current_day == 1 and len(st.session_state.messages) == 1 and not mgr.day_just_completed:
-        st.markdown("""
-<div style="background:#fdf8f0;border:1.5px solid #c9a96e;border-radius:10px;
-padding:12px 16px;margin:0 0 12px 0;">
-  <div style="font-size:12px;font-weight:bold;color:#1a2d5a;margin-bottom:4px;">
-    📌 このページを今すぐお気に入り登録してください
-  </div>
-  <div style="font-size:11px;color:#666;line-height:1.8;">
-    登録しないと次回は最初からになります。<br>
-    📱 スマホ：「共有」ボタン →「ブックマーク」<br>
-    💻 PC：Cmd+D（Mac）/ Ctrl+D（Win）
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-    for msg in st.session_state.messages:
+    for i, msg in enumerate(st.session_state.messages):
         if msg["role"] == "assistant":
             st.markdown(
                 f'<div class="takami-row">'
@@ -1268,6 +1252,21 @@ padding:12px 16px;margin:0 0 12px 0;">
                 f'<div class="user-row"><div class="user-bubble">{msg["content"]}</div></div>',
                 unsafe_allow_html=True,
             )
+        # 最初の吹き出し直後にブックマーク案内（DAY1開始直後のみ）
+        if i == 0 and current_day == 1 and len(st.session_state.messages) == 1 and not mgr.day_just_completed:
+            st.markdown("""
+<div style="background:#fdf8f0;border:1.5px solid #c9a96e;border-radius:10px;
+padding:12px 16px;margin:4px 0 16px 0;">
+  <div style="font-size:12px;font-weight:bold;color:#1a2d5a;margin-bottom:4px;">
+    📌 このページを今すぐお気に入り登録してください
+  </div>
+  <div style="font-size:11px;color:#666;line-height:1.8;">
+    登録しないと次回は最初からになります。<br>
+    📱 スマホ：「共有」ボタン →「ブックマーク」<br>
+    💻 PC：Cmd+D（Mac）/ Ctrl+D（Win）
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
     if mgr.day_just_completed:
         # DAY完了後：ブランディングノートへのボタンを表示
