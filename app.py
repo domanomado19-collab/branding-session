@@ -148,7 +148,6 @@ st.markdown(f"""
     header {{ display: none !important; }}
     [data-testid="stToolbar"] {{ display: none !important; }}
     [data-testid="stDecoration"] {{ display: none !important; }}
-    [data-testid="stBottom"] {{ display: none !important; }}
     .stDeployButton {{ display: none !important; }}
     .viewerBadge_container__r5tak {{ display: none !important; }}
     #stDecoration {{ display: none !important; }}
@@ -420,7 +419,7 @@ _components.html("""
   var SELECTORS = [
     'footer','header','#MainMenu',
     '[data-testid="stToolbar"]','[data-testid="stDecoration"]',
-    '[data-testid="stBottom"]','.stDeployButton',
+    '.stDeployButton',
     '.viewerBadge_container__r5tak','#stDecoration',
     'a[href*="streamlit.io"]'
   ];
