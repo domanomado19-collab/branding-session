@@ -228,7 +228,11 @@ def _init_session():
             mgr_data = saved.get("manager")
             st.session_state.manager = SessionManager.from_dict(mgr_data) if mgr_data else None
             saved_screen = saved["screen"]
-            st.session_state.screen = "home" if saved_screen in ("chat", "day_complete") else saved_screen
+            has_started = bool(saved.get("manager"))
+            if saved_screen in ("chat", "day_complete") or (has_started and saved_screen == "welcome"):
+                st.session_state.screen = "home"
+            else:
+                st.session_state.screen = saved_screen
             st.session_state.is_fresh_session = False
             return
 
@@ -240,8 +244,9 @@ def _init_session():
     st.session_state.messages = []
     st.session_state.sheet = None
     st.session_state.created_at = datetime.now().isoformat()
-    # URL に ?s= がなかった場合のみ True（ベースURL直アクセス）
     st.session_state.is_fresh_session = (sid is None)
+    # 作成直後に保存 → ウェルカム画面URLをブックマークしても復元できるようにする
+    save_session(session_id=new_sid, screen="welcome", messages=[], manager_state=None, sheet=None)
 
 
 def _session_persistence_js():
@@ -763,7 +768,7 @@ padding:16px 18px;margin:12px 0 20px 0;">
     ⚠ はじめにお読みください
   </div>
   <div style="color:#fff;font-size:15px;font-weight:bold;margin-bottom:8px;">
-    このページをお気に入り登録してください
+    名前を入力して「DAY1をスタート」したら、すぐにお気に入り登録してください
   </div>
   <div style="color:rgba(255,255,255,0.85);font-size:12px;line-height:1.9;">
     登録しないと、次回は最初からになる場合があります。<br>
