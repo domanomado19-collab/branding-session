@@ -145,7 +145,6 @@ st.markdown(f"""
     #MainMenu {{ display: none !important; }}
     footer {{ display: none !important; }}
     footer[data-testid="stStatusWidget"] {{ display: none !important; }}
-    header {{ display: none !important; }}
     [data-testid="stToolbar"] {{ display: none !important; }}
     [data-testid="stDecoration"] {{ display: none !important; }}
     .stDeployButton {{ display: none !important; }}
@@ -417,7 +416,7 @@ _components.html("""
 <script>
 (function(){
   var SELECTORS = [
-    'footer','header','#MainMenu',
+    'footer','#MainMenu',
     '[data-testid="stToolbar"]','[data-testid="stDecoration"]',
     '.stDeployButton',
     '.viewerBadge_container__r5tak','#stDecoration',
