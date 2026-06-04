@@ -23,7 +23,7 @@ def build_part_system(part_index: int, user_name: str = "", is_designer: bool = 
     part = PARTS[part_index]
     name_line = (
         f"\n\n【ユーザーのお名前】\n"
-        f"必ず「{user_name}さん」と名前で呼んでください。絶対に省略しないこと。"
+        f"必ず「{user_name}」と入力された名前をそのまま呼んでください。「さん」などは付け加えないこと。絶対に省略しないこと。"
         if user_name else ""
     )
     if is_designer:
@@ -92,7 +92,7 @@ class SessionManager:
         self.is_designer = is_designer
         opening = get_opening_message(0)
         if user_name:
-            opening = opening.replace("はじめまして！", f"はじめまして、{user_name}さん！", 1)
+            opening = opening.replace("はじめまして！", f"はじめまして、{user_name}！", 1)
         self.history.append({"role": "assistant", "content": opening})
         return opening
 

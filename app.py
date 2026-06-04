@@ -943,7 +943,7 @@ AIとの対話のあと、自分の言葉でノートに書き出してみると
     )
     user_name = st.text_input(
         "AIに呼んでほしいニックネームを教えてください",
-        placeholder="例：はなちゃん、よしださん など",
+        placeholder="例：はなちゃん / たかみさん（さん付きもOK）",
         max_chars=20,
     )
     profession = st.radio(
