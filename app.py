@@ -1775,6 +1775,26 @@ def show_admin():
     else:
         st.warning("Supabase 未接続（/tmp を使用中）　— Secrets を確認してください")
 
+    # ── 書き込みテスト ────────────────────────────────────────────────
+    if sb and st.button("🔧 書き込みテスト（診断用）"):
+        import json as _json
+        _test_id = "__diag_test__"
+        _test_data = {
+            "session_id": _test_id,
+            "screen": "test",
+            "messages": _json.dumps([]),
+            "manager": None,
+            "sheet": None,
+            "updated_at": datetime.now().isoformat(),
+            "created_at": datetime.now().isoformat(),
+        }
+        try:
+            sb.table("sessions").upsert(_test_data, on_conflict="session_id").execute()
+            sb.table("sessions").delete().eq("session_id", _test_id).execute()
+            st.success("✅ 書き込み・削除ともに成功！Supabaseへの保存は正常に動作しています。")
+        except Exception as e:
+            st.error(f"❌ 書き込みエラー：{e}")
+
     sessions = load_all_sessions()
     if not sessions:
         st.info("セッションデータがまだありません。")
