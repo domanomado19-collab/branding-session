@@ -4,6 +4,7 @@ import uuid
 import base64
 from datetime import datetime, timedelta
 from pathlib import Path
+from PIL import Image as _PILImage
 import streamlit as st
 import streamlit.components.v1 as _components
 from dotenv import load_dotenv
@@ -18,9 +19,12 @@ from src.session_store import (
     validate_token, consume_token, create_tokens, list_tokens, delete_token,
 )
 
+_favicon_path = Path(__file__).parent / "assets" / "favicon.png"
+_favicon = _PILImage.open(_favicon_path) if _favicon_path.exists() else "✦"
+
 st.set_page_config(
-    page_title="吉田たかみ｜ブランディングセッション",
-    page_icon="✦",
+    page_title="3DAYSマイブラ",
+    page_icon=_favicon,
     layout="centered",
 )
 
@@ -721,22 +725,18 @@ def show_welcome():
 
     # ── お気に入り登録アナウンス ──────────────────────────────────────
     st.markdown("""
-<div style="background:linear-gradient(135deg,#1a2d5a,#243870);border-radius:14px;
-padding:22px 24px;margin:16px 0 24px 0;">
-  <div style="font-size:11px;font-weight:bold;color:#c9a96e;letter-spacing:.15em;margin-bottom:8px;">
-    ⚠ STEP 0 ― はじめにかならずお読みください
+<div style="background:linear-gradient(135deg,#1a2d5a,#243870);border-radius:12px;
+padding:16px 18px;margin:12px 0 20px 0;">
+  <div style="font-size:10px;font-weight:bold;color:#c9a96e;letter-spacing:.12em;margin-bottom:5px;">
+    ⚠ はじめにお読みください
   </div>
-  <div style="color:#fff;font-size:17px;font-weight:bold;margin-bottom:12px;">
-    このページを今すぐお気に入り登録してください
+  <div style="color:#fff;font-size:15px;font-weight:bold;margin-bottom:8px;">
+    このページをお気に入り登録してください
   </div>
-  <div style="color:rgba(255,255,255,0.85);font-size:13px;line-height:2.1;">
-    登録しておかないと、次回アクセス時に最初からになってしまう場合があります。<br>
-    📱 <strong style="color:#c9a96e;">スマホ</strong>：画面下の「共有」ボタン →「ブックマーク」または「ホーム画面に追加」<br>
-    💻 <strong style="color:#c9a96e;">PC</strong>：Cmd＋D（Mac）/ Ctrl＋D（Windows）
-  </div>
-  <div style="margin-top:14px;background:rgba(255,255,255,0.08);border-radius:8px;
-  padding:10px 14px;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.7;">
-    ✅ 登録できたら、下にスクロールしてセッションを始めましょう。
+  <div style="color:rgba(255,255,255,0.85);font-size:12px;line-height:1.9;">
+    登録しないと、次回は最初からになる場合があります。<br>
+    📱 スマホ：「共有」ボタン →「ブックマーク」<br>
+    💻 PC：Cmd+D（Mac）/ Ctrl+D（Win）
   </div>
 </div>
 """, unsafe_allow_html=True)
