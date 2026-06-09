@@ -3,6 +3,13 @@ import os
 import anthropic
 from .persona import TAKAMI_SYSTEM_PROMPT, PARTS, TOTAL_PARTS
 
+def _strip_san(name: str) -> str:
+    """末尾の「さん」を取り除く（二重さん付き防止用）。"""
+    if name.endswith("さん") and len(name) > 2:
+        return name[:-2]
+    return name
+
+
 # DAY終了を検知するマーカー
 # 誤検知を防ぐため「2つ以上マッチ」または「確定フレーズ1つ」で終了と判定する
 _DAY_END_DEFINITE = [
@@ -21,11 +28,14 @@ _DAY_END_SOFT = [
 
 def build_part_system(part_index: int, user_name: str = "", is_designer: bool = True) -> str:
     part = PARTS[part_index]
-    name_line = (
-        f"\n\n【ユーザーのお名前】\n"
-        f"必ず「{user_name}」と入力された名前をそのまま呼んでください。「さん」などは付け加えないこと。絶対に省略しないこと。"
-        if user_name else ""
-    )
+    if user_name:
+        base_name = _strip_san(user_name)
+        name_line = (
+            f"\n\n【ユーザーのお名前】\n"
+            f"必ず「{base_name}さん」と呼んでください。「{base_name}さんさん」のように二重になる絶対NG。絶対に省略しないこと。"
+        )
+    else:
+        name_line = ""
     if is_designer:
         profession_line = (
             "\n\n【ユーザーの職種】\n"
@@ -94,7 +104,8 @@ class SessionManager:
         self.is_designer = is_designer
         opening = get_opening_message(0)
         if user_name:
-            opening = opening.replace("はじめまして！", f"はじめまして、{user_name}！", 1)
+            display_name = _strip_san(user_name) + "さん"
+            opening = opening.replace("はじめまして！", f"はじめまして、{display_name}！", 1)
         self.history.append({"role": "assistant", "content": opening})
         return opening
 

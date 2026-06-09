@@ -210,6 +210,65 @@ st.markdown(f"""
             padding: 10px 14px;
         }}
     }}
+
+    /* ── ダークモード ── */
+    [data-theme="dark"] .stApp {{ background-color: #1a1816; }}
+    [data-theme="dark"] [data-testid="stSidebar"] {{ background-color: #1e1c18; }}
+
+    /* チャット吹き出し */
+    [data-theme="dark"] .takami-bubble {{
+        background: #2a2218;
+        color: #e8e0d4;
+    }}
+    [data-theme="dark"] .takami-name {{ color: #d4b878; }}
+    [data-theme="dark"] .user-bubble {{
+        background: #2d2a6e;
+        color: #fff;
+    }}
+
+    /* シート・カード */
+    [data-theme="dark"] .sheet-section {{
+        background: #1e1c18;
+        border-left-color: #c9a96e;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }}
+    [data-theme="dark"] .sheet-section div {{ color: #e0ddd8; }}
+    [data-theme="dark"] .sheet-label {{ color: #d4b878; }}
+    [data-theme="dark"] .day-card {{
+        background: #1e1c18;
+        border-color: #3a3530;
+        color: #e0ddd8;
+    }}
+    [data-theme="dark"] .day-card-done,
+    [data-theme="dark"] .day-card-active {{
+        background: #201c12;
+        border-color: #9a7944;
+    }}
+    [data-theme="dark"] .day-card-future {{
+        background: #181614;
+        color: #555;
+    }}
+
+    /* テキスト入力 */
+    [data-theme="dark"] div[data-testid="stTextInput"] label {{
+        color: #8899cc !important;
+    }}
+    [data-theme="dark"] div[data-testid="stTextInput"] input {{
+        background: #1e1c18 !important;
+        color: #e0ddd8 !important;
+        border-color: #9a7944 !important;
+    }}
+    [data-theme="dark"] div[data-testid="stTextInput"] input:focus {{
+        border-color: #c9a96e !important;
+        box-shadow: 0 0 0 2px rgba(201,169,110,0.2) !important;
+    }}
+
+    /* ヘッダー文字色 */
+    [data-theme="dark"] h1,
+    [data-theme="dark"] h2,
+    [data-theme="dark"] h3,
+    [data-theme="dark"] h4,
+    [data-theme="dark"] h5 {{ color: #e0ddd8; }}
 </style>
 """, unsafe_allow_html=True)
 
