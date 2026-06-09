@@ -21,7 +21,7 @@ def generate_branding_sheet(part_summaries: list[str]) -> dict:
 ---
 
 ## 現状のタイプ
-side_job / inhouse / specialist / business_owner のどれかを記載（例：side_job）。
+副業スタート型 / 業務委託型 / 起業家型 / ディレクター型 のいずれか1つを日本語で記載。
 
 ## 今の働き方
 現在の働き方・状況を1〜2文で具体的に書く。
@@ -30,7 +30,7 @@ side_job / inhouse / specialist / business_owner のどれかを記載（例：s
 DAY1で話してくれた課題やモヤモヤを箇条書きで3〜5つ。ユーザーの言葉を活かす。
 
 ## 理想のタイプ
-side_job / inhouse / specialist / business_owner のどれかを記載。
+副業スタート型 / 業務委託型 / 起業家型 / ディレクター型 のいずれか1つを日本語で記載。
 
 ## 実現したい時期
 何年後に実現したいかを記載（例：2年後）。
@@ -57,7 +57,7 @@ side_job / inhouse / specialist / business_owner のどれかを記載。
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2048,
+            max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text

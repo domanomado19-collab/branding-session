@@ -3,6 +3,23 @@ import os
 import anthropic
 from .persona import TAKAMI_SYSTEM_PROMPT, PARTS, TOTAL_PARTS
 
+import re as _re
+
+_TYPE_JP_PATTERNS = [
+    (_re.compile(r'business[_\s]?owner型?', _re.IGNORECASE), 'ディレクター型'),
+    (_re.compile(r'side[_\s]?job型?',       _re.IGNORECASE), '副業スタート型'),
+    (_re.compile(r'specialist型?',          _re.IGNORECASE), '起業家型'),
+    (_re.compile(r'inhouse型?',             _re.IGNORECASE), '業務委託型'),
+]
+
+
+def _normalize_type_names(text: str) -> str:
+    """AI返答内の英語タイプコードを日本語に置換する（二重型・大文字小文字対応）。"""
+    for pattern, label in _TYPE_JP_PATTERNS:
+        text = pattern.sub(label, text)
+    return text
+
+
 def _strip_san(name: str) -> str:
     """末尾の「さん」を取り除く（二重さん付き防止用）。"""
     if name.endswith("さん") and len(name) > 2:
@@ -171,11 +188,11 @@ class SessionManager:
         try:
             response = self.client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=2048,
+                max_tokens=4096,
                 system=system,
                 messages=self._api_messages(),
             )
-            reply = response.content[0].text
+            reply = _normalize_type_names(response.content[0].text)
             self.total_input_tokens += response.usage.input_tokens
             self.total_output_tokens += response.usage.output_tokens
         except anthropic.RateLimitError:
@@ -324,7 +341,7 @@ class SessionManager:
         try:
             res = self.client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=512,
+                max_tokens=1024,
                 messages=[{"role": "user", "content": extract_prompt}],
             )
             return res.content[0].text
