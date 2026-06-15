@@ -1545,7 +1545,16 @@ def _sheet_to_text(sheet: dict) -> str:
 
 def show_summary():
     _scroll_top()
-    sheet = st.session_state.sheet
+    sheet = st.session_state.get("sheet")
+    if not sheet:
+        mgr_for_sheet: SessionManager | None = st.session_state.get("manager")
+        if mgr_for_sheet and mgr_for_sheet.part_summaries:
+            with st.spinner("ブランディングシートを作成しています..."):
+                sheet = generate_branding_sheet(mgr_for_sheet.part_summaries)
+            st.session_state.sheet = sheet
+            _persist()
+        else:
+            sheet = {}
 
     st.markdown(
         '<div style="background:linear-gradient(135deg,#1a2d5a,#2d4a7a);border-radius:16px;'
